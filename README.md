@@ -177,4 +177,3 @@ npm run dev
 ご質問やサポートが必要な場合は、プロジェクトの Issue ページでお知らせください。
 
 
-# Deploy trigger

@@ -1,8 +1,8 @@
 'use client'
 
-import { X, Users, DollarSign, Tag, RefreshCw, Shield, Settings } from 'lucide-react'
+import { X, Users, DollarSign, Tag, RefreshCw, Shield, Settings, UserPlus } from 'lucide-react'
 
-type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'audit' | 'settings'
+type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'child-accounts' | 'audit' | 'settings'
 
 interface AdminSidebarProps {
   activeTab: AdminTab
@@ -31,12 +31,18 @@ export function AdminSidebar({ activeTab, onTabChange, isOpen, onClose }: AdminS
       icon: Tag,
       description: '経費カテゴリの設定'
     },
-    {
-      id: 'exemption' as const,
-      name: '上限解放管理',
-      icon: RefreshCw,
-      description: '上限解放申請の承認・管理'
-    },
+            {
+              id: 'exemption' as const,
+              name: '上限解放管理',
+              icon: RefreshCw,
+              description: '上限解放申請の承認・管理'
+            },
+            {
+              id: 'child-accounts' as const,
+              name: '子アカウント管理',
+              icon: UserPlus,
+              description: '子アカウントの作成・管理'
+            },
     {
       id: 'audit' as const,
       name: '監査ログ',

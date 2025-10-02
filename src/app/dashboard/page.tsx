@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { DashboardContent } from '@/components/dashboard/dashboard-content'
 import { getExpenseStats } from '@/lib/expense-utils'
+import { PasswordGuard } from '@/components/password-guard'
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -19,11 +20,13 @@ export default async function DashboardPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardContent
-        user={session.user}
-        stats={stats}
-      />
-    </div>
+    <PasswordGuard>
+      <div className="min-h-screen bg-gray-50">
+        <DashboardContent
+          user={session.user}
+          stats={stats}
+        />
+      </div>
+    </PasswordGuard>
   )
 }

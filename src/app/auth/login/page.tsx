@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, AlertCircle, Key } from 'lucide-react'
+import { ChangePasswordForm } from '@/components/auth/change-password-form'
 
 const loginSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showChangePassword, setShowChangePassword] = useState(false)
   const router = useRouter()
 
   const {
@@ -58,6 +60,15 @@ export default function LoginPage() {
   }
 
 
+  if (showChangePassword) {
+    return (
+      <ChangePasswordForm
+        onSuccess={() => setShowChangePassword(false)}
+        onCancel={() => setShowChangePassword(false)}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -76,7 +87,7 @@ export default function LoginPage() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email-input" className="block text-sm font-medium text-gray-700">
                 メールアドレス
               </label>
               <div className="mt-1 relative">
@@ -84,6 +95,7 @@ export default function LoginPage() {
                   <Mail className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="email-input"
                   {...register('email')}
                   type="email"
                   autoComplete="email"
@@ -100,7 +112,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password-input" className="block text-sm font-medium text-gray-700">
                 パスワード
               </label>
               <div className="mt-1 relative">
@@ -108,6 +120,7 @@ export default function LoginPage() {
                   <Lock className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="password-input"
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
@@ -164,12 +177,20 @@ export default function LoginPage() {
           </div>
         </form>
 
-        <div className="text-center">
-          <p className="text-xs text-gray-500">
-            セキュアな経費申請・承認システム
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">
+                    セキュアな経費申請・承認システム
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowChangePassword(true)}
+                    className="mt-4 text-sm text-blue-600 hover:text-blue-500 flex items-center justify-center mx-auto"
+                  >
+                    <Key className="h-4 w-4 mr-1" />
+                    パスワードを変更
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        }

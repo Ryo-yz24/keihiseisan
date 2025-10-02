@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: 'セキュアな経費申請・承認システム',
   keywords: ['経費', '申請', '承認', '管理'],
   authors: [{ name: '経費計上システム' }],
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export const viewport: Viewport = {
