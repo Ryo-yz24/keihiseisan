@@ -1,45 +1,52 @@
-// シンプルなメモリベースのレート制限
-const attempts = new Map<string, { count: number; resetTime: number }>()
+import { NextRequest } from 'next/server'
 
-export function rateLimit(identifier: string, maxAttempts: number = 5, windowMs: number = 15 * 60 * 1000) {
-  const now = Date.now()
-  const key = identifier
-  const attempt = attempts.get(key)
-
-  if (!attempt || now > attempt.resetTime) {
-    // 新しいウィンドウを開始
-    attempts.set(key, { count: 1, resetTime: now + windowMs })
-    return { success: true, remaining: maxAttempts - 1 }
-  }
-
-  if (attempt.count >= maxAttempts) {
-    return { 
-      success: false, 
-      remaining: 0, 
-      resetTime: attempt.resetTime 
-    }
-  }
-
-  // カウントを増加
-  attempt.count++
-  attempts.set(key, attempt)
-
-  return { 
-    success: true, 
-    remaining: maxAttempts - attempt.count 
-  }
+interface RateLimitOptions {
+  windowMs: number
+  maxRequests: number
 }
 
-// 古いエントリをクリーンアップ（メモリリーク防止）
-setInterval(() => {
-  const now = Date.now()
-  const keysToDelete: string[] = []
-  
-  attempts.forEach((attempt, key) => {
-    if (now > attempt.resetTime) {
-      keysToDelete.push(key)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+export function rateLimit(options: RateLimitOptions) {
+  return {
+    check: (request: NextRequest): { success: boolean; limit: number; remaining: number; resetTime: number } => {
+      const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+      const now = Date.now()
+      const windowMs = options.windowMs
+      const maxRequests = options.maxRequests
+
+      const key = `${ip}:${Math.floor(now / windowMs)}`
+      const current = rateLimitMap.get(key)
+
+      if (!current || now > current.resetTime) {
+        rateLimitMap.set(key, {
+          count: 1,
+          resetTime: now + windowMs
+        })
+        return {
+          success: true,
+          limit: maxRequests,
+          remaining: maxRequests - 1,
+          resetTime: now + windowMs
+        }
+      }
+
+      if (current.count >= maxRequests) {
+        return {
+          success: false,
+          limit: maxRequests,
+          remaining: 0,
+          resetTime: current.resetTime
+        }
+      }
+
+      current.count++
+      return {
+        success: true,
+        limit: maxRequests,
+        remaining: maxRequests - current.count,
+        resetTime: current.resetTime
+      }
     }
-  })
-  
-  keysToDelete.forEach(key => attempts.delete(key))
-}, 5 * 60 * 1000) // 5分ごとにクリーンアップ
+  }
+}
