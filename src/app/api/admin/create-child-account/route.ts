@@ -38,8 +38,7 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         role: 'CHILD',
         masterUserId: session.user.id,
-        canViewOthers: false,
-        isActive: true
+        canViewOthers: false
       }
     })
 

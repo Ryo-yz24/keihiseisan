@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.id }
     })
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (!user || !user.password) {
+      return NextResponse.json({ error: 'User not found or no password set' }, { status: 404 })
     }
 
     // 現在のパスワードを確認
