@@ -7,6 +7,7 @@ import { StatsCards } from './stats-cards'
 import { ExpenseChart } from './expense-chart'
 import { PendingExpenses } from './pending-expenses'
 import { LimitUsageCard } from './limit-usage-card'
+import { ExemptionInfoCard } from './exemption-info-card'
 
 interface DashboardContentProps {
   user: {
@@ -63,6 +64,15 @@ export function DashboardContent({ user, stats }: DashboardContentProps) {
               {user.role === 'MASTER' && stats.limitUsage && (
                 <LimitUsageCard limitUsage={stats.limitUsage} />
               )}
+              
+              {/* 上限解放情報カード */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <ExemptionInfoCard 
+                  userId={user.id} 
+                  year={new Date().getFullYear()} 
+                  month={new Date().getMonth() + 1} 
+                />
+              </div>
               
               {/* グラフエリア */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

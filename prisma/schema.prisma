@@ -62,6 +62,9 @@ model User {
   categories        Category[]
   notifications     Notification[]
   auditLogs         AuditLog[]
+  exemptionRequests LimitExemptionRequest[]
+  approvedExemptions LimitExemptionRequest[] @relation("ApprovedExemptions")
+  exemptionHistories LimitExemptionHistory[]
 
   @@map("users")
 }
@@ -182,6 +185,49 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// 上限解放申請テーブル
+model LimitExemptionRequest {
+  id                String                    @id @default(cuid())
+  userId            String
+  year              Int
+  month             Int
+  requestedAmount   Decimal                   @db.Decimal(10, 2)  // 申請解放限度額
+  equivalentMonths  Int                       // 何月分相当
+  purpose           String                    @db.Text            // 上限解放の目的・理由
+  targetExpenses    String                    @db.Text            // 計上する経費の内容
+  status            ExemptionRequestStatus    @default(PENDING)   // 申請ステータス
+  rejectionReason   String?                   @db.Text            // 却下理由
+  approvedBy        String?                   // 承認者ID
+  approvedAt        DateTime?                 // 承認日時
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  // Relations
+  user              User                      @relation(fields: [userId], references: [id])
+  approver          User?                     @relation("ApprovedExemptions", fields: [approvedBy], references: [id])
+
+  @@map("limit_exemption_requests")
+}
+
+// 上限解放履歴テーブル
+model LimitExemptionHistory {
+  id                String   @id @default(cuid())
+  userId            String
+  year              Int
+  month             Int
+  originalLimit     Decimal  @db.Decimal(10, 2)  // 元の月次限度額
+  exemptionAmount   Decimal  @db.Decimal(10, 2)  // 解放された金額
+  finalLimit        Decimal  @db.Decimal(10, 2)  // 最終限度額
+  usedAmount        Decimal  @db.Decimal(10, 2)  // 使用済み金額
+  requestId         String?                     // 関連する申請ID
+  createdAt         DateTime @default(now())
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@map("limit_exemption_histories")
+}
+
 enum UserRole {
   MASTER
   CHILD
@@ -198,5 +244,12 @@ enum ExpenseStatus {
 enum LimitType {
   MONTHLY
   YEARLY
+}
+
+enum ExemptionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }
 

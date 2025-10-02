@@ -9,6 +9,7 @@ import { ExpenseLimits } from './expense-limits'
 import { CategoryManagement } from './category-management'
 import { AuditLogs } from './audit-logs'
 import { SystemSettings } from './system-settings'
+import { ExemptionManagement } from './exemption-management'
 
 interface AdminDashboardProps {
   user: {
@@ -21,7 +22,7 @@ interface AdminDashboardProps {
   }
 }
 
-type AdminTab = 'users' | 'limits' | 'categories' | 'audit' | 'settings'
+type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'audit' | 'settings'
 
 export function AdminDashboard({ user }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('users')
@@ -35,6 +36,8 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         return <ExpenseLimits masterUserId={user.id} />
       case 'categories':
         return <CategoryManagement masterUserId={user.id} />
+      case 'exemption':
+        return <ExemptionManagement masterUserId={user.id} />
       case 'audit':
         return <AuditLogs masterUserId={user.id} />
       case 'settings':

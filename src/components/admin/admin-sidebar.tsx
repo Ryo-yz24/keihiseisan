@@ -1,8 +1,8 @@
 'use client'
 
-import { X, Users, DollarSign, Tag, Shield, Settings } from 'lucide-react'
+import { X, Users, DollarSign, Tag, RefreshCw, Shield, Settings } from 'lucide-react'
 
-type AdminTab = 'users' | 'limits' | 'categories' | 'audit' | 'settings'
+type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'audit' | 'settings'
 
 interface AdminSidebarProps {
   activeTab: AdminTab
@@ -30,6 +30,12 @@ export function AdminSidebar({ activeTab, onTabChange, isOpen, onClose }: AdminS
       name: 'カテゴリ管理',
       icon: Tag,
       description: '経費カテゴリの設定'
+    },
+    {
+      id: 'exemption' as const,
+      name: '上限解放管理',
+      icon: RefreshCw,
+      description: '上限解放申請の承認・管理'
     },
     {
       id: 'audit' as const,
