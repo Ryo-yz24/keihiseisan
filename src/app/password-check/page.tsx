@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Lock, Eye, EyeOff } from 'lucide-react'
 
-export default function PasswordCheckPage() {
+function PasswordCheckContent() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -99,5 +99,17 @@ export default function PasswordCheckPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PasswordCheckPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <PasswordCheckContent />
+    </Suspense>
   )
 }

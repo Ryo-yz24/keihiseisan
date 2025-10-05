@@ -21,7 +21,7 @@ const nextConfig = {
     serverComponentsExternalPackages: ['@prisma/client'],
   },
   // Netlify用の設定
-  output: 'standalone',
+  trailingSlash: true,
   // 外部アクセス用の設定
   async headers() {
     return [

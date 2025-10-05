@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  NEXTAUTH_URL = "https://your-app-name.netlify.app"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
