@@ -28,6 +28,8 @@ RESEND_API_KEY=dummy-resend-key
 NODE_ENV=production
 ```
 
+**注意**: Node.js 22.xが使用されます（package.jsonで指定済み）。
+
 ### 4. デプロイの実行
 1. 「Deploy」ボタンをクリック
 2. ビルドが完了するまで待機
