@@ -38,26 +38,11 @@ NODE_ENV=production
 ### vercel.json
 ```json
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "functions": {
-    "src/app/api/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
-  },
-  "env": {
-    "NEXTAUTH_URL": "https://your-app-name.vercel.app",
-    "NEXTAUTH_SECRET": "WeyFnOSmnQHV2kkuwyHiwoxD2xMQr6rwTlAlNpxlTX0=",
-    "DATABASE_URL": "postgresql://dummy:dummy@localhost:5432/dummy",
-    "NEXT_PUBLIC_SUPABASE_URL": "https://dummy.supabase.co",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "dummy-anon-key",
-    "SUPABASE_SERVICE_ROLE_KEY": "dummy-service-key",
-    "RESEND_API_KEY": "dummy-resend-key",
-    "NODE_ENV": "production"
-  }
+  "framework": "nextjs"
 }
 ```
+
+**注意**: VercelはNext.jsを自動検出するため、最小限の設定で十分です。
 
 ## トラブルシューティング
 
