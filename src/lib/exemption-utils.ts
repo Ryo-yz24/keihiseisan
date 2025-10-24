@@ -171,7 +171,7 @@ export async function getUserExemptionRequests(
       orderBy: { createdAt: 'desc' }
     })
 
-    return requests.map(request => ({
+    return requests.map((request: any) => ({
       id: request.id,
       userId: request.userId,
       year: request.year,
@@ -222,7 +222,7 @@ export async function getAllExemptionRequests(
       orderBy: { createdAt: 'desc' }
     })
 
-    return requests.map(request => ({
+    return requests.map((request: any) => ({
       id: request.id,
       userId: request.userId,
       year: request.year,

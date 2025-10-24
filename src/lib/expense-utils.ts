@@ -76,7 +76,7 @@ export async function getExpenseStats(
       }
     })
 
-    const statusMap = statusCounts.reduce((acc, item) => {
+    const statusMap = statusCounts.reduce((acc: any, item: any) => {
       acc[item.status] = item._count.id
       return acc
     }, {} as Record<string, number>)
@@ -94,7 +94,7 @@ export async function getExpenseStats(
     })
 
     const totalAmountValue = Number(totalAmount._sum.amount || 0)
-    const categoryBreakdown = categoryData.map(item => ({
+    const categoryBreakdown = categoryData.map((item: any) => ({
       category: item.category,
       amount: Number(item._sum.amount || 0),
       percentage: totalAmountValue > 0 ? (Number(item._sum.amount || 0) / totalAmountValue) * 100 : 0

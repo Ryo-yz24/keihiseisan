@@ -23,7 +23,7 @@ export default async function ExpensesPage() {
           ? { in: await prisma.user.findMany({
               where: { masterUserId: session.user.id },
               select: { id: true }
-            }).then(users => users.map(u => u.id)) }
+            }).then((users: any[]) => users.map((u: any) => u.id)) }
           : session.user.id
       },
       include: {
