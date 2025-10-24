@@ -1,3 +1,5 @@
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -22,6 +24,14 @@ const nextConfig = {
   },
   // Netlify用の設定
   trailingSlash: true,
+  // Webpackエイリアス設定
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      '@': path.resolve(__dirname, 'src'),
+    }
+    return config
+  },
   // 外部アクセス用の設定
   async headers() {
     return [
