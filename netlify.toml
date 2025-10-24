@@ -15,6 +15,8 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+  [plugins.inputs]
+    functions = "netlify/functions"
 
 [build.processing]
   skip_processing = false

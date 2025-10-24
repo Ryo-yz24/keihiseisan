@@ -24,6 +24,8 @@ const nextConfig = {
   },
   // Netlify用の設定
   trailingSlash: true,
+  // Netlify用の出力設定
+  output: 'standalone',
   // Webpackエイリアス設定
   webpack: (config) => {
     config.resolve.alias = {
