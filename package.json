@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": "18.x",
-    "npm": "10.x"
+    "node": "18.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -50,7 +49,6 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^5.14.3",
     "@types/bcryptjs": "^2.4.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",

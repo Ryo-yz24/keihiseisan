@@ -22,10 +22,8 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client'],
   },
-  // Netlify用の設定
-  trailingSlash: true,
-  // Netlify用の出力設定
-  output: 'standalone',
+  // Vercel用の設定
+  trailingSlash: false,
   // Webpackエイリアス設定
   webpack: (config) => {
     config.resolve.alias = {
