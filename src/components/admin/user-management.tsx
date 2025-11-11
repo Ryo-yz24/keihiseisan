@@ -74,8 +74,43 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
     })
   }
 
+  const [inviteData, setInviteData] = useState({ name: '', email: '', password: '' })
+  const [submitting, setSubmitting] = useState(false)
+
   const handleInviteUser = () => {
+    setInviteData({ name: '', email: '', password: '' })
     setShowInviteModal(true)
+  }
+
+  const handleSubmitInvite = async () => {
+    if (!inviteData.name.trim() || !inviteData.email.trim() || !inviteData.password.trim()) {
+      alert('すべての項目を入力してください')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const response = await fetch('/api/admin/users/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inviteData)
+      })
+
+      if (response.ok) {
+        alert('ユーザーを作成しました')
+        setShowInviteModal(false)
+        setInviteData({ name: '', email: '', password: '' })
+        await fetchUsers()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'ユーザーの作成に失敗しました')
+      }
+    } catch (error) {
+      console.error('Error creating user:', error)
+      alert('エラーが発生しました')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleEditUser = (user: User) => {
@@ -165,7 +200,7 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
         </div>
         <button
           onClick={handleInviteUser}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <UserPlus className="h-4 w-4 mr-2" />
           ユーザーを招待
@@ -311,23 +346,84 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
         </div>
       </div>
 
-      {/* 招待モーダル（プレースホルダー） */}
+      {/* 招待モーダル */}
       {showInviteModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowInviteModal(false)}></div>
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => {
+              if (!submitting) {
+                setShowInviteModal(false)
+                setInviteData({ name: '', email: '', password: '' })
+              }
+            }}></div>
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">ユーザーを招待</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  招待機能は開発中です。
-                </p>
-                <button
-                  onClick={() => setShowInviteModal(false)}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm"
-                >
-                  閉じる
-                </button>
+                <div className="space-y-4 mb-4">
+                  <div>
+                    <label htmlFor="userName" className="block text-sm font-medium text-gray-700 mb-2">
+                      名前
+                    </label>
+                    <input
+                      type="text"
+                      id="userName"
+                      value={inviteData.name}
+                      onChange={(e) => setInviteData({ ...inviteData, name: e.target.value })}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="例：田中太郎"
+                      disabled={submitting}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="userEmail" className="block text-sm font-medium text-gray-700 mb-2">
+                      メールアドレス
+                    </label>
+                    <input
+                      type="email"
+                      id="userEmail"
+                      value={inviteData.email}
+                      onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="例：tanaka@example.com"
+                      disabled={submitting}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="userPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                      パスワード（6文字以上）
+                    </label>
+                    <input
+                      type="password"
+                      id="userPassword"
+                      value={inviteData.password}
+                      onChange={(e) => setInviteData({ ...inviteData, password: e.target.value })}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="6文字以上のパスワード"
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      if (!submitting) {
+                        setShowInviteModal(false)
+                        setInviteData({ name: '', email: '', password: '' })
+                      }
+                    }}
+                    disabled={submitting}
+                    className="flex-1 inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={handleSubmitInvite}
+                    disabled={submitting || !inviteData.name.trim() || !inviteData.email.trim() || !inviteData.password.trim()}
+                    className="flex-1 inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? '作成中...' : 'ユーザーを作成'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

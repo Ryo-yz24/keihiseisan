@@ -29,72 +29,29 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    // TODO: APIからカテゴリデータを取得
-    // 現在はモックデータ
-    setTimeout(() => {
-      setCategories([
-        {
-          id: '1',
-          name: '交通費',
-          displayOrder: 1,
-          isActive: true,
-          createdAt: '2024-01-01T00:00:00Z',
-          expenseCount: 15
-        },
-        {
-          id: '2',
-          name: '飲食費（接待）',
-          displayOrder: 2,
-          isActive: true,
-          createdAt: '2024-01-01T00:00:00Z',
-          expenseCount: 8
-        },
-        {
-          id: '3',
-          name: '消耗品費',
-          displayOrder: 3,
-          isActive: true,
-          createdAt: '2024-01-01T00:00:00Z',
-          expenseCount: 12
-        },
-        {
-          id: '4',
-          name: '通信費',
-          displayOrder: 4,
-          isActive: true,
-          createdAt: '2024-01-01T00:00:00Z',
-          expenseCount: 5
-        },
-        {
-          id: '5',
-          name: '水道光熱費',
-          displayOrder: 5,
-          isActive: false,
-          createdAt: '2024-01-01T00:00:00Z',
-          expenseCount: 0
-        },
-        {
-          id: '6',
-          name: '広告宣伝費',
-          displayOrder: 6,
-          isActive: true,
-          createdAt: '2024-01-01T00:00:00Z',
-          expenseCount: 3
-        },
-        {
-          id: '7',
-          name: 'その他（未分類）',
-          displayOrder: 7,
-          isActive: true,
-          createdAt: '2024-01-01T00:00:00Z',
-          expenseCount: 2
-        }
-      ])
-      setLoading(false)
-    }, 1000)
+    fetchCategories()
   }, [masterUserId])
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/categories?includeInactive=true')
+      if (response.ok) {
+        const data = await response.json()
+        setCategories(data.categories || [])
+      } else {
+        console.error('Failed to fetch categories')
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ja-JP', {
@@ -105,33 +62,143 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
   }
 
   const handleCreateCategory = () => {
+    setNewCategoryName('')
     setShowCreateModal(true)
   }
 
   const handleEditCategory = (category: Category) => {
+    setNewCategoryName(category.name)
     setEditingCategory(category)
   }
 
-  const handleDeleteCategory = (categoryId: string) => {
-    if (confirm('このカテゴリを削除しますか？関連する経費データに影響する可能性があります。')) {
-      // TODO: カテゴリ削除APIを呼び出し
-      console.log('カテゴリ削除:', categoryId)
+  const handleSubmitCategory = async () => {
+    if (!newCategoryName.trim()) {
+      alert('カテゴリ名を入力してください')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      if (editingCategory) {
+        // 更新
+        const response = await fetch(`/api/categories/${editingCategory.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newCategoryName })
+        })
+
+        if (response.ok) {
+          await fetchCategories()
+          setEditingCategory(null)
+          setNewCategoryName('')
+        } else {
+          const data = await response.json()
+          alert(data.error || 'カテゴリの更新に失敗しました')
+        }
+      } else {
+        // 新規作成
+        const response = await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newCategoryName })
+        })
+
+        if (response.ok) {
+          await fetchCategories()
+          setShowCreateModal(false)
+          setNewCategoryName('')
+        } else {
+          const data = await response.json()
+          alert(data.error || 'カテゴリの作成に失敗しました')
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting category:', error)
+      alert('エラーが発生しました')
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const handleToggleActive = (categoryId: string, currentStatus: boolean) => {
-    // TODO: ステータス変更APIを呼び出し
-    console.log('ステータス変更:', categoryId, !currentStatus)
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm('このカテゴリを削除しますか？関連する経費データに影響する可能性があります。')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/categories/${categoryId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        await fetchCategories()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'カテゴリの削除に失敗しました')
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error)
+      alert('エラーが発生しました')
+    }
   }
 
-  const handleMoveUp = (categoryId: string) => {
-    // TODO: 表示順序変更APIを呼び出し
-    console.log('上に移動:', categoryId)
+  const handleToggleActive = async (categoryId: string, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`/api/categories/${categoryId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !currentStatus })
+      })
+
+      if (response.ok) {
+        await fetchCategories()
+      } else {
+        alert('ステータスの変更に失敗しました')
+      }
+    } catch (error) {
+      console.error('Error toggling status:', error)
+      alert('エラーが発生しました')
+    }
   }
 
-  const handleMoveDown = (categoryId: string) => {
-    // TODO: 表示順序変更APIを呼び出し
-    console.log('下に移動:', categoryId)
+  const handleMoveUp = async (categoryId: string) => {
+    try {
+      const response = await fetch(`/api/categories/${categoryId}/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction: 'up' })
+      })
+
+      if (response.ok) {
+        await fetchCategories()
+      } else {
+        const data = await response.json()
+        alert(data.error || '移動に失敗しました')
+      }
+    } catch (error) {
+      console.error('Error moving up:', error)
+      alert('エラーが発生しました')
+    }
+  }
+
+  const handleMoveDown = async (categoryId: string) => {
+    try {
+      const response = await fetch(`/api/categories/${categoryId}/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction: 'down' })
+      })
+
+      if (response.ok) {
+        await fetchCategories()
+      } else {
+        const data = await response.json()
+        alert(data.error || '移動に失敗しました')
+      }
+    } catch (error) {
+      console.error('Error moving down:', error)
+      alert('エラーが発生しました')
+    }
   }
 
   if (loading) {
@@ -162,7 +229,7 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
         </div>
         <button
           onClick={handleCreateCategory}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           カテゴリを追加
@@ -290,31 +357,63 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
         </div>
       </div>
 
-      {/* 作成・編集モーダル（プレースホルダー） */}
+      {/* 作成・編集モーダル */}
       {(showCreateModal || editingCategory) && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => {
-              setShowCreateModal(false)
-              setEditingCategory(null)
+              if (!submitting) {
+                setShowCreateModal(false)
+                setEditingCategory(null)
+                setNewCategoryName('')
+              }
             }}></div>
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   {editingCategory ? 'カテゴリを編集' : 'カテゴリを追加'}
                 </h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  カテゴリ管理機能は開発中です。
-                </p>
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false)
-                    setEditingCategory(null)
-                  }}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm"
-                >
-                  閉じる
-                </button>
+                <div className="mb-4">
+                  <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700 mb-2">
+                    カテゴリ名
+                  </label>
+                  <input
+                    type="text"
+                    id="categoryName"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="例：交通費、飲食費など"
+                    disabled={submitting}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !submitting) {
+                        handleSubmitCategory()
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      if (!submitting) {
+                        setShowCreateModal(false)
+                        setEditingCategory(null)
+                        setNewCategoryName('')
+                      }
+                    }}
+                    disabled={submitting}
+                    className="flex-1 inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={handleSubmitCategory}
+                    disabled={submitting || !newCategoryName.trim()}
+                    className="flex-1 inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? '保存中...' : (editingCategory ? '更新' : '作成')}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
