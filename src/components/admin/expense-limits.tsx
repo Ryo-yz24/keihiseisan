@@ -1,27 +1,56 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  DollarSign,
-  Calendar,
-  Users,
-  AlertTriangle,
-  CheckCircle
-} from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Plus, Pencil, Trash2, AlertCircle, CheckCircle, DollarSign, Users } from 'lucide-react'
+
+const limitFormSchema = z.object({
+  targetUserId: z.string().optional(),
+  limitType: z.enum(['MONTHLY', 'YEARLY']),
+  limitAmount: z.string().min(1, '金額を入力してください'),
+  year: z.string().min(1, '年を選択してください'),
+  month: z.string().optional(),
+}).refine((data) => {
+  if (data.limitType === 'MONTHLY' && !data.month) {
+    return false
+  }
+  return true
+}, {
+  message: '月次限度額の場合、月を選択してください',
+  path: ['month'],
+})
+
+type LimitFormData = z.infer<typeof limitFormSchema>
 
 interface ExpenseLimit {
   id: string
-  targetUserId?: string
-  targetUserName?: string
+  masterUserId: string
+  targetUserId: string | null
   limitType: 'MONTHLY' | 'YEARLY'
   limitAmount: number
   year: number
-  month?: number
+  month: number | null
   createdAt: string
-  isActive: boolean
+  updatedAt: string
+  targetUser?: {
+    id: string
+    name: string
+    email: string
+  }
+}
+
+interface ChildUser {
+  id: string
+  name: string
+  email: string
 }
 
 interface ExpenseLimitsProps {
@@ -30,268 +59,287 @@ interface ExpenseLimitsProps {
 
 export function ExpenseLimits({ masterUserId }: ExpenseLimitsProps) {
   const [limits, setLimits] = useState<ExpenseLimit[]>([])
+  const [childUsers, setChildUsers] = useState<ChildUser[]>([])
   const [loading, setLoading] = useState(true)
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingLimit, setEditingLimit] = useState<ExpenseLimit | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ExpenseLimit | null>(null)
+
+  const form = useForm<LimitFormData>({
+    resolver: zodResolver(limitFormSchema),
+    defaultValues: {
+      targetUserId: undefined,
+      limitType: 'MONTHLY',
+      limitAmount: '',
+      year: new Date().getFullYear().toString(),
+      month: (new Date().getMonth() + 1).toString(),
+    },
+  })
 
   useEffect(() => {
-    // TODO: APIから限度額データを取得
-    // 現在はモックデータ
-    setTimeout(() => {
-      setLimits([
-        {
-          id: '1',
-          limitType: 'MONTHLY',
-          limitAmount: 100000,
-          year: 2024,
-          month: 1,
-          createdAt: '2024-01-01T00:00:00Z',
-          isActive: true
-        },
-        {
-          id: '2',
-          targetUserId: 'user1',
-          targetUserName: '田中太郎',
-          limitType: 'MONTHLY',
-          limitAmount: 50000,
-          year: 2024,
-          month: 1,
-          createdAt: '2024-01-01T00:00:00Z',
-          isActive: true
-        },
-        {
-          id: '3',
-          limitType: 'YEARLY',
-          limitAmount: 1200000,
-          year: 2024,
-          createdAt: '2024-01-01T00:00:00Z',
-          isActive: true
-        }
-      ])
+    fetchLimits()
+    fetchChildUsers()
+  }, [])
+
+  useEffect(() => {
+    if (editingLimit) {
+      form.reset({
+        targetUserId: editingLimit.targetUserId || undefined,
+        limitType: editingLimit.limitType,
+        limitAmount: editingLimit.limitAmount.toString(),
+        year: editingLimit.year.toString(),
+        month: editingLimit.month?.toString() || '',
+      })
+    } else {
+      form.reset({
+        targetUserId: undefined,
+        limitType: 'MONTHLY',
+        limitAmount: '',
+        year: new Date().getFullYear().toString(),
+        month: (new Date().getMonth() + 1).toString(),
+      })
+    }
+  }, [editingLimit, form])
+
+  const fetchLimits = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await fetch(`/api/admin/limits`)
+      
+      if (!response.ok) {
+        throw new Error('限度額の取得に失敗しました')
+      }
+
+      const data = await response.json()
+      setLimits(data.limits || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    } finally {
       setLoading(false)
-    }, 1000)
-  }, [masterUserId])
+    }
+  }
+
+  const fetchChildUsers = async () => {
+    try {
+      const response = await fetch(`/api/admin/child-accounts`)
+      
+      if (!response.ok) {
+        throw new Error('子アカウントの取得に失敗しました')
+      }
+
+      const data = await response.json()
+      setChildUsers(data.childAccounts || [])
+    } catch (err) {
+      console.error('Error fetching child users:', err)
+    }
+  }
+
+  const onSubmit = async (data: LimitFormData) => {
+    try {
+      setError(null)
+      
+      const payload = {
+        targetUserId: data.targetUserId === '__all__' ? null : (data.targetUserId || null),
+        limitType: data.limitType,
+        limitAmount: parseFloat(data.limitAmount),
+        year: parseInt(data.year),
+        month: data.month ? parseInt(data.month) : null,
+      }
+
+      let response
+      if (editingLimit) {
+        response = await fetch(`/api/admin/limits/${editingLimit.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      } else {
+        response = await fetch('/api/admin/limits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '限度額の保存に失敗しました')
+      }
+
+      setSuccess(editingLimit ? '限度額を更新しました' : '限度額を作成しました')
+      setIsDialogOpen(false)
+      setEditingLimit(null)
+      form.reset()
+      await fetchLimits()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    try {
+      setError(null)
+      const response = await fetch(`/api/admin/limits/${deleteTarget.id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('限度額の削除に失敗しました')
+      setSuccess('限度額を削除しました')
+      setDeleteTarget(null)
+      await fetchLimits()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    }
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ja-JP', {
       style: 'currency',
-      currency: 'JPY'
+      currency: 'JPY',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount)
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  const getLimitTypeText = (type: string, month?: number) => {
-    if (type === 'MONTHLY') {
-      return `月次 (${month}月)`
-    }
-    return '年次'
-  }
-
-  const handleCreateLimit = () => {
-    setShowCreateModal(true)
-  }
-
-  const handleEditLimit = (limit: ExpenseLimit) => {
-    setEditingLimit(limit)
-  }
-
-  const handleDeleteLimit = (limitId: string) => {
-    if (confirm('この限度額設定を削除しますか？')) {
-      // TODO: 限度額削除APIを呼び出し
-      console.log('限度額削除:', limitId)
-    }
-  }
-
-  const handleToggleActive = (limitId: string, currentStatus: boolean) => {
-    // TODO: ステータス変更APIを呼び出し
-    console.log('ステータス変更:', limitId, !currentStatus)
   }
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-10 bg-gray-200 rounded w-full mb-6"></div>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center text-gray-500">読み込み中...</div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)
+  const months = Array.from({ length: 12 }, (_, i) => i + 1)
+
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">限度額設定</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            経費限度額の設定・管理を行います
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">限度額管理</h1>
+          <p className="text-gray-600">経費の月次・年次限度額の設定</p>
         </div>
-        <button
-          onClick={handleCreateLimit}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          限度額を設定
-        </button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => { setEditingLimit(null); form.reset() }} className="flex items-center space-x-2">
+              <Plus className="h-4 w-4" />
+              <span>限度額を設定</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingLimit ? '限度額を編集' : '限度額を設定'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label>対象ユーザー</Label>
+                <Select value={form.watch('targetUserId') || undefined} onValueChange={(value) => form.setValue('targetUserId', value)}>
+                  <SelectTrigger><SelectValue placeholder="全体（デフォルト）" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">全体（デフォルト）</SelectItem>
+                    
+                    {childUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>{user.name} ({user.email})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>限度額タイプ</Label>
+                <Select value={form.watch('limitType')} onValueChange={(value) => form.setValue('limitType', value as 'MONTHLY' | 'YEARLY')}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MONTHLY">月次</SelectItem>
+                    <SelectItem value="YEARLY">年次</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>限度額（円）</Label>
+                <input {...form.register('limitAmount')} type="number" min="0" className="w-full px-3 py-2 border rounded-md" placeholder="100000" />
+                {form.formState.errors.limitAmount && <p className="text-sm text-red-600">{form.formState.errors.limitAmount.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label>年</Label>
+                <Select value={form.watch('year')} onValueChange={(value) => form.setValue('year', value)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{years.map((year) => <SelectItem key={year} value={year.toString()}>{year}年</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              {form.watch('limitType') === 'MONTHLY' && (
+                <div className="space-y-2">
+                  <Label>月</Label>
+                  <Select value={form.watch('month') || undefined} onValueChange={(value) => form.setValue('month', value)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{months.map((month) => <SelectItem key={month} value={month.toString()}>{month}月</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => { setIsDialogOpen(false); setEditingLimit(null) }}>キャンセル</Button>
+                <Button type="submit">{editingLimit ? '更新' : '作成'}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* 限度額一覧 */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              限度額設定一覧 ({limits.length}件)
-            </h3>
-          </div>
-
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex"><AlertCircle className="h-5 w-5 text-red-400" /><div className="ml-3"><p className="text-sm text-red-800">{error}</p></div></div>
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4">
+          <div className="flex"><CheckCircle className="h-5 w-5 text-green-400" /><div className="ml-3"><p className="text-sm text-green-800">{success}</p></div></div>
+        </div>
+      )}
+      <Card>
+        <CardHeader><CardTitle className="flex items-center space-x-2"><DollarSign className="h-5 w-5" /><span>設定済み限度額</span></CardTitle></CardHeader>
+        <CardContent>
           {limits.length === 0 ? (
-            <div className="text-center py-8">
-              <DollarSign className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">限度額設定がありません</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                限度額を設定して経費管理を開始しましょう。
-              </p>
-            </div>
+            <div className="text-center text-gray-500 py-8">限度額が設定されていません</div>
           ) : (
             <div className="space-y-4">
               {limits.map((limit) => (
-                <div key={limit.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          limit.isActive ? 'bg-green-100' : 'bg-gray-100'
-                        }`}>
-                          {limit.isActive ? (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <AlertTriangle className="h-5 w-5 text-gray-400" />
-                          )}
-                        </div>
+                <div key={limit.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{limit.limitType === 'MONTHLY' ? '月次' : '年次'}</span>
+                        <span className="flex items-center text-sm text-gray-600"><Users className="h-4 w-4 mr-1" />{limit.targetUserId ? (limit.targetUser?.name || '特定ユーザー') : '全体'}</span>
                       </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <p className="text-lg font-semibold text-gray-900">
-                            {formatCurrency(limit.limitAmount)}
-                          </p>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            limit.isActive 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {limit.isActive ? '有効' : '無効'}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {getLimitTypeText(limit.limitType, limit.month)}
-                          </div>
-                          <div className="flex items-center">
-                            <span className="font-medium">{limit.year}年</span>
-                          </div>
-                          {limit.targetUserName && (
-                            <div className="flex items-center">
-                              <Users className="h-4 w-4 mr-1" />
-                              {limit.targetUserName}
-                            </div>
-                          )}
-                          {!limit.targetUserName && (
-                            <div className="flex items-center">
-                              <Users className="h-4 w-4 mr-1" />
-                              全体
-                            </div>
-                          )}
-                        </div>
-                        
-                        <p className="text-xs text-gray-500 mt-1">
-                          設定日: {formatDate(limit.createdAt)}
-                        </p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div><div className="text-gray-500">限度額</div><div className="text-lg font-semibold text-gray-900">{formatCurrency(limit.limitAmount)}</div></div>
+                        <div><div className="text-gray-500">対象期間</div><div className="font-medium text-gray-900">{limit.year}年{limit.month && ` ${limit.month}月`}</div></div>
+                        <div><div className="text-gray-500">作成日</div><div className="font-medium text-gray-900">{new Date(limit.createdAt).toLocaleDateString('ja-JP')}</div></div>
                       </div>
                     </div>
-
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleToggleActive(limit.id, limit.isActive)}
-                        className={`px-3 py-1 text-xs font-medium rounded ${
-                          limit.isActive
-                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            : 'bg-green-100 text-green-700 hover:bg-green-200'
-                        }`}
-                      >
-                        {limit.isActive ? '無効化' : '有効化'}
-                      </button>
-                      
-                      <button
-                        onClick={() => handleEditLimit(limit)}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-md"
-                        title="編集"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      
-                      <button
-                        onClick={() => handleDeleteLimit(limit.id)}
-                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md"
-                        title="削除"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    <div className="flex space-x-2 ml-4">
+                      <Button onClick={() => { setEditingLimit(limit); setIsDialogOpen(true) }} size="sm" variant="outline"><Pencil className="h-4 w-4" /><span>編集</span></Button>
+                      <Button onClick={() => setDeleteTarget(limit)} size="sm" variant="outline" className="border-red-300 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* 作成・編集モーダル（プレースホルダー） */}
-      {(showCreateModal || editingLimit) && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => {
-              setShowCreateModal(false)
-              setEditingLimit(null)
-            }}></div>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {editingLimit ? '限度額を編集' : '限度額を設定'}
-                </h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  限度額設定機能は開発中です。
-                </p>
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false)
-                    setEditingLimit(null)
-                  }}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm"
-                >
-                  閉じる
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>限度額を削除しますか？</AlertDialogTitle><AlertDialogDescription>この操作は取り消せません。本当に削除してもよろしいですか？</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel onClick={() => setDeleteTarget(null)}>キャンセル</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">削除</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

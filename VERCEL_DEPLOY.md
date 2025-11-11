@@ -1,71 +1,89 @@
-# Vercelデプロイ手順書
+# Vercel デプロイ手順書
+
+## 必要な環境変数
+
+Vercelの環境変数設定で以下を設定してください：
+
+### データベース (必須)
+
+```
+DATABASE_URL=your_postgresql_connection_string
+```
+
+### Supabase (必須)
+
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
+
+### NextAuth (必須)
+
+```
+NEXTAUTH_URL=https://your-domain.vercel.app
+NEXTAUTH_SECRET=your_generated_secret
+```
+
+NEXTAUTH_SECRETの生成方法：
+```bash
+openssl rand -base64 32
+```
+
+### SMTP (オプション - メール通知を有効にする場合)
+
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+```
 
 ## デプロイ手順
 
 ### 1. Vercelアカウントの準備
-1. [Vercel](https://vercel.com)にアクセス
-2. GitHubアカウントでログイン
-3. 新しいプロジェクトを作成
+
+1. [Vercel](https://vercel.com) にサインアップ/ログイン
+2. GitHubアカウントと連携
 
 ### 2. プロジェクトのインポート
-1. GitHubリポジトリを選択: `Ryo-yz24/keihiseisan`
-2. フレームワーク: **Next.js** を選択
-3. ルートディレクトリ: `/` (デフォルト)
-4. ビルドコマンド: `npm run build` (自動設定)
-5. 出力ディレクトリ: `.next` (自動設定)
+
+1. Vercel ダッシュボードで「Add New Project」をクリック
+2. GitHubリポジトリを選択してインポート
+3. プロジェクト設定：
+   - **Framework Preset**: Next.js
+   - **Root Directory**: ./
+   - **Build Command**: npm run build
+   - **Output Directory**: .next
 
 ### 3. 環境変数の設定
-Vercelのダッシュボードで以下の環境変数を設定：
 
+1. 「Environment Variables」セクションで上記の環境変数を追加
+2. すべての環境変数をProduction、Preview、Developmentに適用
+
+### 4. データベースのセットアップ
+
+デプロイ前にデータベースマイグレーションを実行：
+
+```bash
+npx prisma migrate deploy
 ```
-NEXTAUTH_URL=https://your-app-name.vercel.app
-NEXTAUTH_SECRET=WeyFnOSmnQHV2kkuwyHiwoxD2xMQr6rwTlAlNpxlTX0=
-DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
-NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key
-SUPABASE_SERVICE_ROLE_KEY=dummy-service-key
-RESEND_API_KEY=dummy-resend-key
-NODE_ENV=production
-```
 
-**注意**: Node.js 22.xが使用されます（package.jsonで指定済み）。
+### 5. デプロイ
 
-### 4. デプロイの実行
 1. 「Deploy」ボタンをクリック
-2. ビルドが完了するまで待機
-3. デプロイされたURLを確認
+2. ビルドログを確認
+3. デプロイ完了後、URLにアクセスして動作確認
 
-## 設定ファイル
+## デプロイ後の確認事項
 
-### vercel.json
-```json
-{
-  "framework": "nextjs"
-}
-```
+- [ ] ログインページが表示される
+- [ ] ログインができる
+- [ ] ダッシュボードが表示される
+- [ ] 経費申請ができる
+- [ ] 画像アップロードが動作する
 
-**注意**: VercelはNext.jsを自動検出するため、最小限の設定で十分です。
+---
 
-## トラブルシューティング
-
-### ビルドエラーの場合
-1. ローカルで `npm run build` を実行
-2. エラーが発生した場合は修正
-3. 再度デプロイを実行
-
-### 環境変数エラーの場合
-1. Vercelダッシュボードで環境変数を確認
-2. すべての環境変数が正しく設定されているか確認
-3. デプロイを再実行
-
-### デプロイ後の確認
-1. アプリケーションが正常に表示されるか確認
-2. ログイン機能が動作するか確認
-3. パスワード保護が機能するか確認
-
-## 特徴
-
-- **環境変数ファイル不要**: `.env`ファイルを読み込まない
-- **自動設定**: VercelがNext.jsを自動検出
-- **簡単デプロイ**: GitHubと連携して自動デプロイ
-- **無料プラン**: 個人利用なら無料で使用可能
+最終更新: 2025-11-11

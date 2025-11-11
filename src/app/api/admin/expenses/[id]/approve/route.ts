@@ -1,0 +1,74 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { createAuditLog } from '@/lib/audit'
+import { sendEmail } from '@/lib/email'
+
+export const dynamic = 'force-dynamic'
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session || session.user.role !== 'MASTER') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id } = params
+
+    const expense = await prisma.expense.findUnique({
+      where: { id },
+      include: { user: true },
+    })
+
+    if (!expense) {
+      return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
+    }
+
+    if (expense.user.masterUserId !== session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const updatedExpense = await prisma.expense.update({
+      where: { id },
+      data: {
+        status: 'APPROVED',
+        approvedBy: session.user.id,
+        approvedAt: new Date(),
+      },
+    })
+
+    // 監査ログを記録
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'APPROVE',
+      tableName: 'expenses',
+      recordId: id,
+      oldValue: { status: expense.status },
+      newValue: { status: 'APPROVED', approvedBy: session.user.id },
+      request,
+    })
+
+    // 承認時に申請者にメール通知
+    try {
+      if (expense.user.email) {
+        await sendEmail('expense_approved', {
+          userEmail: expense.user.email,
+          amount: expense.amount,
+          category: expense.category,
+        })
+      }
+    } catch (emailError) {
+      console.error('Failed to send approval email:', emailError)
+    }
+
+    return NextResponse.json({ success: true, expense: updatedExpense })
+  } catch (error) {
+    console.error('Error approving expense:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

@@ -43,78 +43,38 @@ export function AuditLogs({ masterUserId }: AuditLogsProps) {
   const [filterTable, setFilterTable] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(20)
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null)
 
   useEffect(() => {
-    // TODO: APIから監査ログデータを取得
-    // 現在はモックデータ
-    setTimeout(() => {
-      setLogs([
-        {
-          id: '1',
-          userId: 'user1',
-          userName: '田中太郎',
-          action: 'LOGIN',
-          tableName: 'users',
-          recordId: 'user1',
-          newValue: { email: 'tanaka@example.com', loginAt: '2024-01-15T10:30:00Z' },
-          ipAddress: '192.168.1.100',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          createdAt: '2024-01-15T10:30:00Z'
-        },
-        {
-          id: '2',
-          userId: 'user1',
-          userName: '田中太郎',
-          action: 'CREATE',
-          tableName: 'expenses',
-          recordId: 'expense1',
-          newValue: { amount: 15000, vendor: '株式会社サンプル', category: '飲食費（接待）' },
-          ipAddress: '192.168.1.100',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          createdAt: '2024-01-15T10:25:00Z'
-        },
-        {
-          id: '3',
-          userId: 'master1',
-          userName: '管理者',
-          action: 'APPROVE',
-          tableName: 'expenses',
-          recordId: 'expense1',
-          oldValue: { status: 'PENDING' },
-          newValue: { status: 'APPROVED', approvedAt: '2024-01-15T11:00:00Z' },
-          ipAddress: '192.168.1.101',
-          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-          createdAt: '2024-01-15T11:00:00Z'
-        },
-        {
-          id: '4',
-          userId: 'master1',
-          userName: '管理者',
-          action: 'UPDATE',
-          tableName: 'users',
-          recordId: 'user2',
-          oldValue: { canViewOthers: false },
-          newValue: { canViewOthers: true },
-          ipAddress: '192.168.1.101',
-          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-          createdAt: '2024-01-15T09:30:00Z'
-        },
-        {
-          id: '5',
-          userId: 'user2',
-          userName: '佐藤花子',
-          action: 'DELETE',
-          tableName: 'expenses',
-          recordId: 'expense2',
-          oldValue: { amount: 8500, vendor: '交通費', status: 'DRAFT' },
-          ipAddress: '192.168.1.102',
-          userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15',
-          createdAt: '2024-01-14T16:45:00Z'
-        }
-      ])
+    fetchLogs()
+  }, [masterUserId, searchTerm, filterAction, filterTable, currentPage])
+
+  const fetchLogs = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      })
+
+      if (searchTerm) params.append('search', searchTerm)
+      if (filterAction) params.append('action', filterAction)
+      if (filterTable) params.append('table', filterTable)
+
+      const response = await fetch(`/api/admin/audit-logs?${params}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setLogs(data.logs)
+      } else {
+        console.error('Failed to fetch logs:', data.error)
+      }
+    } catch (error) {
+      console.error('Error fetching logs:', error)
+    } finally {
       setLoading(false)
-    }, 1000)
-  }, [masterUserId])
+    }
+  }
 
   const getActionIcon = (action: string) => {
     switch (action) {
@@ -183,8 +143,33 @@ export function AuditLogs({ masterUserId }: AuditLogsProps) {
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage)
 
   const handleExport = () => {
-    // TODO: CSV/Excelエクスポート機能を実装
-    console.log('エクスポート:', filteredLogs)
+    // CSVエクスポート機能
+    const csvHeaders = ['日時', 'ユーザー', 'アクション', 'テーブル', 'レコードID', 'IPアドレス', '変更前', '変更後']
+    const csvRows = logs.map(log => [
+      formatDate(log.createdAt),
+      log.userName,
+      log.action,
+      log.tableName,
+      log.recordId,
+      log.ipAddress || '-',
+      log.oldValue ? JSON.stringify(log.oldValue) : '-',
+      log.newValue ? JSON.stringify(log.newValue) : '-'
+    ])
+
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `audit-logs-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   if (loading) {
@@ -307,58 +292,84 @@ export function AuditLogs({ masterUserId }: AuditLogsProps) {
           ) : (
             <div className="space-y-4">
               {paginatedLogs.map((log) => (
-                <div key={log.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      {getActionIcon(log.action)}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getActionColor(log.action)}`}>
-                          {log.action}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {log.tableName}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          ID: {log.recordId}
-                        </span>
+                <div key={log.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                  <div
+                    className="p-4 cursor-pointer hover:bg-gray-50"
+                    onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                  >
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        {getActionIcon(log.action)}
                       </div>
-                      
-                      <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 mr-1" />
-                          {log.userName}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getActionColor(log.action)}`}>
+                            {log.action}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {log.tableName}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            ID: {log.recordId}
+                          </span>
                         </div>
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {formatDate(log.createdAt)}
+
+                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-1" />
+                            {log.userName}
+                          </div>
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {formatDate(log.createdAt)}
+                          </div>
+                          {log.ipAddress && (
+                            <div className="text-xs text-gray-500">
+                              IP: {log.ipAddress}
+                            </div>
+                          )}
                         </div>
-                        {log.ipAddress && (
-                          <div className="text-xs text-gray-500">
-                            IP: {log.ipAddress}
+                      </div>
+
+                      <div className="flex-shrink-0">
+                        {expandedLogId === log.id ? (
+                          <span className="text-xs text-gray-500">▼ 閉じる</span>
+                        ) : (
+                          <span className="text-xs text-gray-500">▶ 詳細</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {expandedLogId === log.id && (log.oldValue || log.newValue) && (
+                    <div className="px-4 pb-4 bg-gray-50 border-t border-gray-200">
+                      <div className="mt-3">
+                        <div className="text-xs font-medium text-gray-700 mb-2">変更内容:</div>
+                        {log.oldValue && (
+                          <div className="mb-2 p-2 bg-red-50 rounded border border-red-200">
+                            <div className="text-xs font-medium text-red-700 mb-1">変更前:</div>
+                            <pre className="text-xs text-red-600 whitespace-pre-wrap">
+                              {JSON.stringify(log.oldValue, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                        {log.newValue && (
+                          <div className="p-2 bg-green-50 rounded border border-green-200">
+                            <div className="text-xs font-medium text-green-700 mb-1">変更後:</div>
+                            <pre className="text-xs text-green-600 whitespace-pre-wrap">
+                              {JSON.stringify(log.newValue, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                        {log.userAgent && (
+                          <div className="mt-2 text-xs text-gray-500">
+                            <strong>User-Agent:</strong> {log.userAgent}
                           </div>
                         )}
                       </div>
-                      
-                      {(log.oldValue || log.newValue) && (
-                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                          <div className="text-xs text-gray-500 mb-1">変更内容:</div>
-                          {log.oldValue && (
-                            <div className="text-xs text-red-600 mb-1">
-                              <strong>変更前:</strong> {JSON.stringify(log.oldValue, null, 2)}
-                            </div>
-                          )}
-                          {log.newValue && (
-                            <div className="text-xs text-green-600">
-                              <strong>変更後:</strong> {JSON.stringify(log.newValue, null, 2)}
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

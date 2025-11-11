@@ -51,3 +51,4 @@ NODE_ENV=production
 - [ ] next.config.jsでwebpackエイリアスが設定
 - [ ] すべての依存関係がpackage.jsonに記載
 - [ ] ローカルでnpm run buildが成功
+

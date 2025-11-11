@@ -11,6 +11,8 @@ import { AuditLogs } from './audit-logs'
 import { SystemSettings } from './system-settings'
 import { ExemptionManagement } from './exemption-management'
 import { ChildAccountManagement } from './child-account-management'
+import { ExpenseApproval } from './expense-approval'
+import { AnnualSummaryReport } from './annual-summary-report'
 
 interface AdminDashboardProps {
   user: {
@@ -23,7 +25,7 @@ interface AdminDashboardProps {
   }
 }
 
-type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'child-accounts' | 'audit' | 'settings'
+type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'expense-approval' | 'child-accounts' | 'audit' | 'reports' | 'settings'
 
 export function AdminDashboard({ user }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('users')
@@ -39,10 +41,14 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         return <CategoryManagement masterUserId={user.id} />
       case 'exemption':
         return <ExemptionManagement masterUserId={user.id} />
+      case 'expense-approval':
+        return <ExpenseApproval masterUserId={user.id} />
       case 'child-accounts':
         return <ChildAccountManagement masterUserId={user.id} />
       case 'audit':
         return <AuditLogs masterUserId={user.id} />
+      case 'reports':
+        return <AnnualSummaryReport />
       case 'settings':
         return <SystemSettings masterUserId={user.id} />
       default:
@@ -76,5 +82,3 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     </div>
   )
 }
-
-

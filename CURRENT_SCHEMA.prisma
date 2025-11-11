@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                 String                  @id @default(cuid())
+  name               String?
+  email              String                  @unique
+  emailVerified      DateTime?
+  image              String?
+  password           String?
+  role               UserRole                @default(CHILD)
+  masterUserId       String?
+  canViewOthers      Boolean                 @default(false)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  deletedAt          DateTime?
+  accounts           Account[]
+  sessions           Session[]
+  auditLogs          AuditLog[]
+  categories         Category[]
+  expenseLimits      ExpenseLimit[]
+  approvedExpenses   Expense[]               @relation("ApprovedExpenses")
+  expenses           Expense[]
+  exemptionHistories LimitExemptionHistory[]
+  approvedExemptions LimitExemptionRequest[] @relation("ApprovedExemptions")
+  exemptionRequests  LimitExemptionRequest[]
+  notifications      Notification[]
+  masterUser         User?                   @relation("MasterChild", fields: [masterUserId], references: [id])
+  childUsers         User[]                  @relation("MasterChild")
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Expense {
+  id               String         @id @default(cuid())
+  userId           String
+  expenseDate      DateTime
+  amount           Decimal        @db.Decimal(10, 2)
+  taxRate          Decimal        @db.Decimal(3, 2)
+  taxAmount        Decimal        @db.Decimal(10, 2)
+  amountWithoutTax Decimal        @db.Decimal(10, 2)
+  vendor           String
+  purpose          String
+  category         String
+  status           ExpenseStatus  @default(DRAFT)
+  rejectionReason  String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  approvedAt       DateTime?
+  approvedBy       String?
+  images           ExpenseImage[]
+  approver         User?          @relation("ApprovedExpenses", fields: [approvedBy], references: [id])
+  user             User           @relation(fields: [userId], references: [id])
+  notifications    Notification[]
+
+  @@map("expenses")
+}
+
+model ExpenseImage {
+  id         String   @id @default(cuid())
+  expenseId  String
+  filePath   String
+  fileName   String
+  fileSize   Int
+  mimeType   String
+  uploadedAt DateTime @default(now())
+  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@map("expense_images")
+}
+
+model ExpenseLimit {
+  id           String    @id @default(cuid())
+  masterUserId String
+  targetUserId String?
+  limitType    LimitType
+  limitAmount  Decimal   @db.Decimal(10, 2)
+  year         Int
+  month        Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  masterUser   User      @relation(fields: [masterUserId], references: [id])
+
+  @@map("expense_limits")
+}
+
+model Category {
+  id           String   @id @default(cuid())
+  masterUserId String
+  name         String
+  displayOrder Int
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  masterUser   User     @relation(fields: [masterUserId], references: [id])
+
+  @@map("categories")
+}
+
+model Notification {
+  id               String   @id @default(cuid())
+  userId           String
+  type             String
+  title            String
+  message          String
+  isRead           Boolean  @default(false)
+  relatedExpenseId String?
+  createdAt        DateTime @default(now())
+  relatedExpense   Expense? @relation(fields: [relatedExpenseId], references: [id])
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  tableName String
+  recordId  String
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model LimitExemptionRequest {
+  id               String                 @id @default(cuid())
+  userId           String
+  year             Int
+  month            Int
+  requestedAmount  Decimal                @db.Decimal(10, 2)
+  equivalentMonths Int
+  purpose          String
+  targetExpenses   String
+  status           ExemptionRequestStatus @default(PENDING)
+  rejectionReason  String?
+  approvedBy       String?
+  approvedAt       DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  approver         User?                  @relation("ApprovedExemptions", fields: [approvedBy], references: [id])
+  user             User                   @relation(fields: [userId], references: [id])
+
+  @@map("limit_exemption_requests")
+}
+
+model LimitExemptionHistory {
+  id              String   @id @default(cuid())
+  userId          String
+  year            Int
+  month           Int
+  originalLimit   Decimal  @db.Decimal(10, 2)
+  exemptionAmount Decimal  @db.Decimal(10, 2)
+  finalLimit      Decimal  @db.Decimal(10, 2)
+  usedAmount      Decimal  @db.Decimal(10, 2)
+  requestId       String?
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@map("limit_exemption_histories")
+}
+
+enum UserRole {
+  MASTER
+  CHILD
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DRAFT
+  REVISION
+}
+
+enum LimitType {
+  MONTHLY
+  YEARLY
+}
+
+enum ExemptionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}

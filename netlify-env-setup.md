@@ -42,3 +42,4 @@ NODE_ENV=production
 - `NEXTAUTH_URL`は、実際のNetlifyのURLに置き換えてください
 - Supabaseの設定は、実際のプロジェクトの値に置き換えてください
 - 環境変数は**大文字**で入力してください
+

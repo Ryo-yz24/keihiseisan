@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
@@ -133,10 +135,9 @@ export default async function ExpensesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ExpenseManagement 
-        user={session.user} 
-        initialExpenses={expenses}
-        categories={categories}
+      <ExpenseManagement
+        userId={session.user.id}
+        userRole={session.user.role}
       />
     </div>
   )

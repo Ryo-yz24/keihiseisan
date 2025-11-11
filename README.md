@@ -35,7 +35,19 @@
 - 月別・年別の経費推移
 - カテゴリ別内訳
 - 限度額使用状況
-- エクスポート機能（CSV、Excel）
+- 年次サマリーレポート
+- エクスポート機能（CSV、PDF）
+
+### 📧 通知機能
+- 経費申請時のマスターアカウント通知
+- 承認・却下時の申請者通知
+- 上限解放申請の通知
+- HTMLメールテンプレート対応
+
+### 📄 PDFエクスポート
+- 個別経費明細のPDF出力
+- 年次サマリーレポートのPDF出力
+- 日本語フォント対応
 
 ## 技術スタック
 
@@ -53,6 +65,8 @@
 - **Prisma** (ORM)
 - **NextAuth.js v5** (認証)
 - **Supabase Storage** (ファイルストレージ)
+- **Nodemailer** (メール送信)
+- **jsPDF** (PDF生成)
 
 ### デプロイ
 - **Vercel** (ホスティング)
@@ -77,6 +91,9 @@ src/
 │   ├── auth.ts           # NextAuth 設定
 │   ├── prisma.ts         # Prisma クライアント
 │   ├── security.ts       # セキュリティ機能
+│   ├── email.ts          # メール送信機能
+│   ├── pdf.ts            # PDF生成機能
+│   ├── audit.ts          # 監査ログ機能
 │   └── supabase.ts       # Supabase 設定
 └── types/                # TypeScript 型定義
 ```
@@ -106,8 +123,13 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your_nextauth_secret
 
-# Resend
-RESEND_API_KEY=your_resend_api_key
+# Email (optional - メール通知を有効にする場合)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+ENABLE_EMAIL_IN_DEV=true  # 開発環境でもメール送信する場合
 ```
 
 ### 3. データベースのセットアップ
@@ -156,7 +178,11 @@ npm run dev
 - ユーザー管理
 - 限度額設定
 - カテゴリ管理
+- 子アカウント管理
+- 上限解放申請管理
+- 経費承認管理
 - 監査ログ
+- 年次レポート
 - システム設定
 
 ## セキュリティ機能
@@ -175,5 +201,6 @@ npm run dev
 ## サポート
 
 ご質問やサポートが必要な場合は、プロジェクトの Issue ページでお知らせください。
+
 
 

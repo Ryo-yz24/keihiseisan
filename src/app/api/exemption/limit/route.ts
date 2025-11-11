@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getCurrentAvailableLimit } from '@/lib/exemption-utils'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -36,3 +38,4 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+

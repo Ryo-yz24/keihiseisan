@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { ExpenseStats } from '@/lib/expense-utils'
 import { DashboardHeader } from './dashboard-header'
 import { StatsCards } from './stats-cards'
@@ -8,6 +9,8 @@ import { ExpenseChart } from './expense-chart'
 import { PendingExpenses } from './pending-expenses'
 import { LimitUsageCard } from './limit-usage-card'
 import { ExemptionInfoCard } from './exemption-info-card'
+import { ExpenseManagement } from '@/components/expenses/expense-management'
+import { AnnualSummaryReport } from '@/components/admin/annual-summary-report'
 
 interface DashboardContentProps {
   user: {
@@ -96,28 +99,27 @@ export function DashboardContent({ user, stats }: DashboardContentProps) {
           )}
 
           {activeTab === 'expenses' && (
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  経費一覧
-                </h3>
-                <p className="text-gray-500">
-                  経費一覧機能は開発中です。
-                </p>
-              </div>
+            <div>
+              <ExpenseManagement userId={user.id} userRole={user.role} />
             </div>
           )}
 
           {activeTab === 'reports' && (
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  レポート
-                </h3>
-                <p className="text-gray-500">
-                  レポート機能は開発中です。
-                </p>
-              </div>
+            <div>
+              {user.role === 'MASTER' ? (
+                <AnnualSummaryReport />
+              ) : (
+                <div className="bg-white shadow rounded-lg">
+                  <div className="px-4 py-5 sm:p-6">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                      レポート
+                    </h3>
+                    <p className="text-gray-500">
+                      レポート機能はマスターアカウント専用です。
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

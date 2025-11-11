@@ -62,10 +62,11 @@ export function ExpenseChart({ data, title, type }: ExpenseChartProps) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percentage }) => `${name} ${percentage?.toFixed(1)}%`}
+                label={({ category, percentage }) => `${category || ''} ${percentage?.toFixed(1)}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="amount"
+                nameKey="category"
               >
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -100,3 +101,4 @@ export function ExpenseChart({ data, title, type }: ExpenseChartProps) {
     </div>
   )
 }
+

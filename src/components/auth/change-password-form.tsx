@@ -256,3 +256,4 @@ export function ChangePasswordForm({ onSuccess, onCancel }: ChangePasswordFormPr
     </div>
   )
 }
+

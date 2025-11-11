@@ -240,3 +240,4 @@ export function ExemptionInfoCard({
     </Card>
   )
 }
+

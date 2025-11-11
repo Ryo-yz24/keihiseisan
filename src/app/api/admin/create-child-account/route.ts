@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { createAuditLog } from '@/lib/audit'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,6 +43,21 @@ export async function POST(request: NextRequest) {
         masterUserId: session.user.id,
         canViewOthers: false
       }
+    })
+
+    // 監査ログを記録
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'CREATE',
+      tableName: 'users',
+      recordId: childUser.id,
+      newValue: {
+        email: childUser.email,
+        name: childUser.name,
+        role: 'CHILD',
+        masterUserId: session.user.id,
+      },
+      request,
     })
 
     return NextResponse.json({

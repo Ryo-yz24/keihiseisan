@@ -23,6 +23,7 @@ const nextConfig = {
     serverComponentsExternalPackages: ['@prisma/client'],
   },
   // Vercel用の設定
+  output: 'standalone',
   trailingSlash: false,
   // Webpackエイリアス設定
   webpack: (config) => {

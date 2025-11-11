@@ -1,400 +1,443 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Calendar, DollarSign, Building2, FileText, Tag, Upload, X, Save, ArrowLeft } from 'lucide-react'
+import * as z from 'zod'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AlertCircle, CheckCircle, Upload, X, Calendar, DollarSign, Home } from 'lucide-react'
+import Link from 'next/link'
 
-const expenseSchema = z.object({
+const expenseFormSchema = z.object({
   expenseDate: z.string().min(1, '日付を選択してください'),
-  amount: z.string().min(1, '金額を入力してください').refine((val) => !isNaN(Number(val)) && Number(val) > 0, '有効な金額を入力してください'),
+  amount: z.string().min(1, '金額を入力してください'),
   taxRate: z.string().min(1, '税率を選択してください'),
-  vendor: z.string().min(1, '取引先を入力してください'),
+  vendor: z.string().min(1, '支払先を入力してください'),
   purpose: z.string().min(1, '目的を入力してください'),
   category: z.string().min(1, 'カテゴリを選択してください'),
-  images: z.array(z.instanceof(File)).optional()
 })
 
-type ExpenseFormData = z.infer<typeof expenseSchema>
-
 interface ExpenseFormProps {
-  user: {
-    id: string
-    email: string
-    name?: string | null
-    role: 'MASTER' | 'CHILD'
-    masterUserId?: string | null
-    canViewOthers: boolean
-  }
-  categories: Array<{
-    id: string
-    name: string
-    displayOrder: number
-    isActive: boolean
-  }>
-  editingExpense?: {
-    id: string
-    expenseDate: Date
-    amount: number
-    taxRate: number
-    taxAmount: number
-    amountWithoutTax: number
-    vendor: string
-    purpose: string
-    category: string
-    status: 'PENDING' | 'APPROVED' | 'REJECTED'
-    rejectionReason?: string | null
-    createdAt: Date
-    updatedAt: Date
-    userId: string
-    approvedAt?: Date | null
-    approvedBy?: string | null
-    user: {
-      id: string
-      name: string | null
-      email: string
-    }
-    approver?: {
-      id: string
-      name: string | null
-    } | null
-  } | null
-  onSave: (data: ExpenseFormData) => Promise<void>
-  onCancel: () => void
-  isLoading?: boolean
+  userId: string
+  expense?: any
+  onCancel?: () => void
+  onSuccess?: () => void
 }
 
-export function ExpenseForm({ user, categories, editingExpense, onSave, onCancel, isLoading = false }: ExpenseFormProps) {
-  const [uploadedImages, setUploadedImages] = useState<File[]>([])
-  const [dragActive, setDragActive] = useState(false)
+export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFormProps) {
+  const [categories, setCategories] = useState<any[]>([])
+  const [images, setImages] = useState<File[]>([])
+  const [existingImages, setExistingImages] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors, isSubmitting }
-  } = useForm<ExpenseFormData>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: editingExpense ? {
-      expenseDate: editingExpense.expenseDate.toISOString().split('T')[0],
-      amount: editingExpense.amount.toString(),
-      taxRate: editingExpense.taxRate.toString(),
-      vendor: editingExpense.vendor,
-      purpose: editingExpense.purpose,
-      category: editingExpense.category
-    } : {
-      expenseDate: new Date().toISOString().split('T')[0],
-      taxRate: '0.10'
-    }
+  const isEditMode = !!expense
+
+  const form = useForm({
+    resolver: zodResolver(expenseFormSchema),
+    defaultValues: {
+      expenseDate: expense?.expenseDate ? new Date(expense.expenseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      amount: expense?.amount?.toString() || '',
+      taxRate: expense?.taxRate ? (expense.taxRate * 100).toString() : '10',
+      vendor: expense?.vendor || '',
+      purpose: expense?.purpose || '',
+      category: expense?.category || '',
+    },
   })
 
-  const watchedAmount = watch('amount')
-  const watchedTaxRate = watch('taxRate')
+  useEffect(() => {
+    fetchCategories()
+  }, [])
 
-  const calculateTax = () => {
-    const amount = parseFloat(watchedAmount || '0')
-    const taxRate = parseFloat(watchedTaxRate || '0')
-    const taxAmount = amount * taxRate
-    const amountWithoutTax = amount - taxAmount
+  useEffect(() => {
+    if (expense) {
+      // 編集モードの場合、フォームの値を更新
+      form.reset({
+        expenseDate: new Date(expense.expenseDate).toISOString().split('T')[0],
+        amount: expense.amount.toString(),
+        taxRate: (expense.taxRate * 100).toString(),
+        vendor: expense.vendor,
+        purpose: expense.purpose,
+        category: expense.category,
+      })
+      setExistingImages(expense.images || [])
+    } else {
+      // 新規作成モードの場合、フォームをクリア
+      form.reset({
+        expenseDate: new Date().toISOString().split('T')[0],
+        amount: '',
+        taxRate: '10',
+        vendor: '',
+        purpose: '',
+        category: '',
+      })
+      setExistingImages([])
+      setImages([])
+    }
+  }, [expense, form])
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories')
+      if (!response.ok) throw new Error('カテゴリの取得に失敗しました')
+      const data = await response.json()
+      setCategories(data.categories || [])
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+    }
+  }
+
+  const calculateTax = (amount: string, taxRate: string) => {
+    const amountNum = parseFloat(amount) || 0
+    const taxRateNum = parseFloat(taxRate) || 0
+    const taxAmount = Math.floor(amountNum * (taxRateNum / 100))
+    const amountWithoutTax = amountNum - taxAmount
     return { taxAmount, amountWithoutTax }
   }
 
-  const { taxAmount, amountWithoutTax } = calculateTax()
+  const amount = form.watch('amount')
+  const taxRate = form.watch('taxRate')
+  const { taxAmount, amountWithoutTax } = calculateTax(amount, taxRate)
 
-  const handleImageUpload = (files: FileList | null) => {
-    if (!files) return
-
-    const newImages = Array.from(files).filter(file => 
-      file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024 // 5MB制限
-    )
-
-    setUploadedImages(prev => [...prev, ...newImages])
-    setValue('images', [...uploadedImages, ...newImages])
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setImages(Array.from(e.target.files))
+    }
   }
 
   const removeImage = (index: number) => {
-    const newImages = uploadedImages.filter((_, i) => i !== index)
-    setUploadedImages(newImages)
-    setValue('images', newImages)
+    setImages(images.filter((_, i) => i !== index))
   }
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
-  }
+  const removeExistingImage = async (imageId: string) => {
+    if (!expense) return
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleImageUpload(e.dataTransfer.files)
-    }
-  }
-
-  const onSubmit = async (data: ExpenseFormData) => {
     try {
-      await onSave(data)
-    } catch (error) {
-      console.error('保存エラー:', error)
+      const response = await fetch(`/api/expenses/${expense.id}/images/${imageId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('画像の削除に失敗しました')
+      }
+
+      setExistingImages(existingImages.filter(img => img.id !== imageId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    }
+  }
+
+  const onSubmit = async (data: any, isDraft: boolean) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const formData = new FormData()
+      formData.append('expenseDate', data.expenseDate)
+      formData.append('amount', data.amount)
+      formData.append('taxRate', data.taxRate)
+      formData.append('taxAmount', taxAmount.toString())
+      formData.append('amountWithoutTax', amountWithoutTax.toString())
+      formData.append('vendor', data.vendor)
+      formData.append('purpose', data.purpose)
+      formData.append('category', data.category)
+      formData.append('status', isDraft ? 'DRAFT' : 'PENDING')
+
+      images.forEach((image) => {
+        formData.append('images', image)
+      })
+
+      const url = isEditMode ? `/api/expenses/${expense.id}` : '/api/expenses'
+      const method = isEditMode ? 'PATCH' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error(isEditMode ? '経費の更新に失敗しました' : '経費の申請に失敗しました')
+      }
+
+      setSuccess(
+        isEditMode 
+          ? '経費を更新しました' 
+          : isDraft ? '下書きとして保存しました' : '経費を申請しました'
+      )
+      
+      if (!isEditMode) {
+        form.reset()
+        setImages([])
+      }
+
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess()
+        }, 1000)
+      } else {
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {/* ヘッダー */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={onCancel}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  {editingExpense ? '経費を編集' : '新しい経費を申請'}
-                </h1>
-                <p className="text-sm text-gray-500 mt-1">
-                  {editingExpense ? '経費の詳細を編集してください' : '経費の詳細を入力してください'}
-                </p>
-              </div>
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <DollarSign className="h-6 w-6" />
+            <span>{isEditMode ? '経費編集' : '経費申請'}</span>
           </div>
-        </div>
-
-        {/* フォーム */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* 日付 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-2" />
-                日付 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                {...register('expenseDate')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              {errors.expenseDate && (
-                <p className="mt-1 text-sm text-red-600">{errors.expenseDate.message}</p>
-              )}
-            </div>
-
-            {/* 金額 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <DollarSign className="w-4 h-4 inline mr-2" />
-                金額（税込） <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('amount')}
-                  className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="0.00"
-                />
-                <span className="absolute left-3 top-2.5 text-gray-500 text-sm">¥</span>
-              </div>
-              {errors.amount && (
-                <p className="mt-1 text-sm text-red-600">{errors.amount.message}</p>
-              )}
-            </div>
-
-            {/* 税率 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                税率 <span className="text-red-500">*</span>
-              </label>
-              <select
-                {...register('taxRate')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="0.00">0%</option>
-                <option value="0.08">8%</option>
-                <option value="0.10">10%</option>
-              </select>
-              {errors.taxRate && (
-                <p className="mt-1 text-sm text-red-600">{errors.taxRate.message}</p>
-              )}
-            </div>
-
-            {/* 税額計算結果 */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">税額計算</h3>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>税込金額:</span>
-                  <span className="font-medium">¥{watchedAmount || '0'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>税額:</span>
-                  <span className="font-medium">¥{taxAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between border-t pt-1">
-                  <span>税抜金額:</span>
-                  <span className="font-medium">¥{amountWithoutTax.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 取引先 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Building2 className="w-4 h-4 inline mr-2" />
-                取引先 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                {...register('vendor')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="株式会社サンプル"
-              />
-              {errors.vendor && (
-                <p className="mt-1 text-sm text-red-600">{errors.vendor.message}</p>
-              )}
-            </div>
-
-            {/* カテゴリ */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Tag className="w-4 h-4 inline mr-2" />
-                カテゴリ <span className="text-red-500">*</span>
-              </label>
-              <select
-                {...register('category')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">カテゴリを選択してください</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              {errors.category && (
-                <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
-              )}
-            </div>
+          <div className="flex items-center space-x-3">
+            {isEditMode && (
+              <span className="text-sm font-normal text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                編集モード
+              </span>
+            )}
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              ホーム
+            </Link>
           </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={form.handleSubmit((data) => onSubmit(data, false))} className="space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="flex">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* 目的 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <FileText className="w-4 h-4 inline mr-2" />
-              目的・詳細 <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              {...register('purpose')}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="経費の目的や詳細を入力してください"
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+              <div className="flex">
+                <CheckCircle className="h-5 w-5 text-green-400" />
+                <div className="ml-3">
+                  <p className="text-sm text-green-800">{success}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>日付 <span className="text-red-500">*</span></Label>
+            <input
+              {...form.register('expenseDate')}
+              type="date"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {errors.purpose && (
-              <p className="mt-1 text-sm text-red-600">{errors.purpose.message}</p>
+            {form.formState.errors.expenseDate && (
+              <p className="text-sm text-red-600">{String(form.formState.errors.expenseDate.message)}</p>
             )}
           </div>
 
-          {/* 画像アップロード */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Upload className="w-4 h-4 inline mr-2" />
-              領収書・画像（任意）
-            </label>
-            <div
-              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                dragActive
-                  ? 'border-blue-400 bg-blue-50'
-                  : 'border-gray-300 hover:border-gray-400'
-              }`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>カテゴリ <span className="text-red-500">*</span></Label>
+              <span className="text-xs text-gray-500">({categories.length}件)</span>
+            </div>
+            <Select value={form.watch('category')} onValueChange={(value) => form.setValue('category', value)}>
+              <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.category && (
+              <p className="text-sm text-red-600">{String(form.formState.errors.category.message)}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>支払先 <span className="text-red-500">*</span></Label>
+            <input
+              {...form.register('vendor')}
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例: Amazon、スターバックス"
+            />
+            {form.formState.errors.vendor && (
+              <p className="text-sm text-red-600">{String(form.formState.errors.vendor.message)}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label>金額（税込） <span className="text-red-500">*</span></Label>
               <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e.target.files)}
-                className="hidden"
-                id="image-upload"
+                {...form.register('amount')}
+                type="number"
+                min="0"
+                step="1"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="1000"
               />
-              <label
-                htmlFor="image-upload"
-                className="cursor-pointer flex flex-col items-center space-y-2"
-              >
-                <Upload className="w-8 h-8 text-gray-400" />
-                <div>
-                  <span className="text-sm text-gray-600">
-                    クリックして画像を選択
-                  </span>
-                  <span className="text-sm text-gray-500">またはドラッグ&ドロップ</span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  最大5MB、JPG/PNG/PDF形式
-                </p>
-              </label>
+              {form.formState.errors.amount && (
+                <p className="text-sm text-red-600">{String(form.formState.errors.amount.message)}</p>
+              )}
             </div>
 
-            {/* アップロード済み画像 */}
-            {uploadedImages.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">アップロード済み画像</h4>
+            <div className="space-y-2">
+              <Label>税率 <span className="text-red-500">*</span></Label>
+              <Select value={form.watch('taxRate')} onValueChange={(value) => form.setValue('taxRate', value)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10%</SelectItem>
+                  <SelectItem value="8">8%（軽減税率）</SelectItem>
+                  <SelectItem value="0">0%（非課税）</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>税額</Label>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
+                ¥{taxAmount.toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="text-sm text-blue-800">
+              <div className="flex justify-between">
+                <span>税抜金額:</span>
+                <span className="font-semibold">¥{amountWithoutTax.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span>税額:</span>
+                <span className="font-semibold">¥{taxAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between mt-2 pt-2 border-t border-blue-300">
+                <span className="font-bold">合計（税込）:</span>
+                <span className="font-bold text-lg">¥{(parseFloat(amount) || 0).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>目的・用途 <span className="text-red-500">*</span></Label>
+            <textarea
+              {...form.register('purpose')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
+              placeholder="経費の目的や用途を詳しく記入してください"
+            />
+            {form.formState.errors.purpose && (
+              <p className="text-sm text-red-600">{String(form.formState.errors.purpose.message)}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>領収書画像</Label>
+            
+            {existingImages.length > 0 && (
+              <div className="mb-4">
+                <div className="text-sm text-gray-600 mb-2">既存の画像</div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {uploadedImages.map((file, index) => (
-                    <div key={index} className="relative group">
-                      <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                        <span className="text-xs text-gray-500 truncate px-2">
-                          {file.name}
-                        </span>
-                      </div>
+                  {existingImages.map((image) => (
+                    <div key={image.id} className="relative">
+                      <img
+                        src={image.filePath}
+                        alt={image.fileName}
+                        className="w-full h-32 object-cover rounded-md border"
+                      />
                       <button
                         type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeExistingImage(image.id)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            <div className="flex items-center space-x-2">
+              <label className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+                <Upload className="h-4 w-4" />
+                <span className="text-sm">画像を選択</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </label>
+              <span className="text-sm text-gray-500">{images.length}枚選択中</span>
+            </div>
+
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                {images.map((image, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={URL.createObjectURL(image)}
+                      alt={`領収書 ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-md border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* ボタン */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || isLoading}
-              className="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSubmitting || isLoading ? '保存中...' : '保存'}</span>
-            </button>
+          <div className="flex justify-end space-x-3 pt-4">
+            {isEditMode && onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={loading}
+              >
+                キャンセル
+              </Button>
+            )}
+            {!isEditMode && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => form.handleSubmit((data) => onSubmit(data, true))()}
+                disabled={loading}
+              >
+                下書き保存
+              </Button>
+            )}
+            <Button type="submit" disabled={loading}>
+              {loading ? (isEditMode ? '更新中...' : '申請中...') : (isEditMode ? '更新する' : '申請する')}
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

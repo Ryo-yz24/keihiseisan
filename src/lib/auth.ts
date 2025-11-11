@@ -1,13 +1,12 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-// import { PrismaAdapter } from '@next-auth/prisma-adapter'
-// import { prisma } from '@/lib/prisma'
+import { PrismaAdapter } from '@next-auth/prisma-adapter'
+import { prisma } from '@/lib/prisma'
 import { env } from '@/lib/env'
 import bcrypt from 'bcryptjs'
 
 export const authOptions: NextAuthOptions = {
-  // 一時的にPrismaAdapterを無効化
-  // adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -20,39 +19,40 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // 一時的にシンプルな認証（パスワードハッシュなし）
-        if (credentials.email === 'admin@example.com' && credentials.password === 'password123') {
-          return {
-            id: '1',
-            email: 'admin@example.com',
-            name: '管理者',
-            role: 'MASTER' as const,
-            masterUserId: null,
-            canViewOthers: true
-          }
-        }
-        
-        if (credentials.email === 'user@example.com' && credentials.password === 'password123') {
-          return {
-            id: '2',
-            email: 'user@example.com',
-            name: '一般ユーザー',
-            role: 'CHILD' as const,
-            masterUserId: '1',
-            canViewOthers: false
-          }
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email }
+        })
+
+        if (!user || !user.password) {
+          return null
         }
 
-        return null
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        )
+
+        if (!isPasswordValid) {
+          return null
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          masterUserId: user.masterUserId,
+          canViewOthers: user.canViewOthers
+        }
       }
     })
   ],
   session: {
     strategy: 'jwt',
-    maxAge: 8 * 60 * 60, // 8時間（セキュリティ強化）
+    maxAge: 8 * 60 * 60,
   },
   jwt: {
-    maxAge: 8 * 60 * 60, // 8時間
+    maxAge: 8 * 60 * 60,
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -79,7 +79,6 @@ export const authOptions: NextAuthOptions = {
   },
   secret: env.NEXTAUTH_SECRET,
   debug: env.NODE_ENV === 'development',
-  // セキュリティ強化
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
@@ -92,4 +91,3 @@ export const authOptions: NextAuthOptions = {
     }
   }
 }
-

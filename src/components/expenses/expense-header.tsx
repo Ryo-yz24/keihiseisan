@@ -1,14 +1,16 @@
 'use client'
 
 import { UserRole } from '@prisma/client'
-import { 
-  Plus, 
-  List, 
-  FileText, 
+import Link from 'next/link'
+import {
+  Plus,
+  List,
+  FileText,
   Search,
   Filter,
   Download,
-  Upload
+  Upload,
+  Home
 } from 'lucide-react'
 
 interface ExpenseHeaderProps {
@@ -73,25 +75,33 @@ export function ExpenseHeader({ user, activeTab, onTabChange, onCreateExpense }:
 
           {/* 右側: アクションボタン */}
           <div className="flex items-center space-x-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              ホーム
+            </Link>
+
             {activeTab === 'list' && (
               <>
                 <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                   <Search className="h-4 w-4 mr-2" />
                   検索
                 </button>
-                
+
                 <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                   <Filter className="h-4 w-4 mr-2" />
                   フィルター
                 </button>
-                
+
                 <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                   <Download className="h-4 w-4 mr-2" />
                   エクスポート
                 </button>
               </>
             )}
-            
+
             {activeTab === 'list' && (
               <button
                 onClick={onCreateExpense}
@@ -107,5 +117,6 @@ export function ExpenseHeader({ user, activeTab, onTabChange, onCreateExpense }:
     </header>
   )
 }
+
 
 

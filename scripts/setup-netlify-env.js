@@ -36,3 +36,4 @@ console.log('2. プロジェクトを選択')
 console.log('3. 「Site settings」→「Environment variables」をクリック')
 console.log('4. 上記の環境変数を1つずつ追加')
 console.log('\n注意: NEXTAUTH_URLは実際のNetlifyのURLに置き換えてください')
+

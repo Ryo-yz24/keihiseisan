@@ -1,8 +1,8 @@
 'use client'
 
-import { X, Users, DollarSign, Tag, RefreshCw, Shield, Settings, UserPlus } from 'lucide-react'
+import { X, Users, DollarSign, Tag, RefreshCw, Shield, Settings, UserPlus, FileText, BarChart3 } from 'lucide-react'
 
-type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'child-accounts' | 'audit' | 'settings'
+type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'expense-approval' | 'child-accounts' | 'audit' | 'reports' | 'settings'
 
 interface AdminSidebarProps {
   activeTab: AdminTab
@@ -31,23 +31,35 @@ export function AdminSidebar({ activeTab, onTabChange, isOpen, onClose }: AdminS
       icon: Tag,
       description: '経費カテゴリの設定'
     },
-            {
-              id: 'exemption' as const,
-              name: '上限解放管理',
-              icon: RefreshCw,
-              description: '上限解放申請の承認・管理'
-            },
-            {
-              id: 'child-accounts' as const,
-              name: '子アカウント管理',
-              icon: UserPlus,
-              description: '子アカウントの作成・管理'
-            },
+    {
+      id: 'exemption' as const,
+      name: '上限解放管理',
+      icon: RefreshCw,
+      description: '上限解放申請の承認・管理'
+    },
+    {
+      id: 'expense-approval' as const,
+      name: '経費承認',
+      icon: FileText,
+      description: '経費申請の承認・却下'
+    },
+    {
+      id: 'child-accounts' as const,
+      name: '子アカウント管理',
+      icon: UserPlus,
+      description: '子アカウントの作成・管理'
+    },
     {
       id: 'audit' as const,
       name: '監査ログ',
       icon: Shield,
       description: 'システム利用ログの確認'
+    },
+    {
+      id: 'reports' as const,
+      name: 'レポート',
+      icon: BarChart3,
+      description: '年次サマリーと分析レポート'
     },
     {
       id: 'settings' as const,
@@ -142,5 +154,3 @@ export function AdminSidebar({ activeTab, onTabChange, isOpen, onClose }: AdminS
     </>
   )
 }
-
-
