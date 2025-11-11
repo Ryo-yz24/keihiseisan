@@ -262,7 +262,12 @@ async function getCurrentMonthLimit(
       }
     })
 
-    return limit ? Number(limit.limitAmount) : 0
+    const result = limit ? Number(limit.limitAmount) : 0
+
+    // デバッグ用ログ
+    console.log(`[getCurrentMonthLimit] userId=${userId}, year=${year}, month=${month}, limit=${result}, found=${!!limit}`)
+
+    return result
   } catch (error) {
     console.error('Error getting current month limit:', error)
     return 0
@@ -321,13 +326,18 @@ export async function getCurrentAvailableLimit(
     const usedAmountValue = Number(usedAmount._sum.amount || 0)
     const availableAmount = finalLimit - usedAmountValue
 
-    return {
+    const result = {
       originalLimit,
       exemptionAmount,
       finalLimit,
       usedAmount: usedAmountValue,
       availableAmount: Math.max(0, availableAmount)
     }
+
+    // デバッグ用ログ
+    console.log(`[getCurrentAvailableLimit] userId=${userId}, year=${year}, month=${month}, result=`, result)
+
+    return result
   } catch (error) {
     console.error('Error getting current available limit:', error)
     return {

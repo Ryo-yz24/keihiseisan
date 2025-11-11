@@ -62,7 +62,7 @@ export function ExemptionInfoCard({
   }
 
   const getUsagePercentage = () => {
-    if (!exemptionInfo) return 0
+    if (!exemptionInfo || exemptionInfo.finalLimit === 0) return 0
     return (exemptionInfo.usedAmount / exemptionInfo.finalLimit) * 100
   }
 
@@ -148,7 +148,9 @@ export function ExemptionInfoCard({
             <div className="flex justify-between text-sm">
               <span>使用状況</span>
               <span className={getUsageColor(usagePercentage)}>
-                {usagePercentage.toFixed(1)}%
+                {isNaN(usagePercentage) || !isFinite(usagePercentage)
+                  ? '0.0'
+                  : usagePercentage.toFixed(1)}%
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">

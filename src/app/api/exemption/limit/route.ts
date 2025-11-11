@@ -29,7 +29,19 @@ export async function GET(request: NextRequest) {
 
     const limitInfo = await getCurrentAvailableLimit(userId, year, month)
 
-    return NextResponse.json(limitInfo)
+    // デバッグ用ログ
+    console.log(`[API /exemption/limit] userId=${userId}, year=${year}, month=${month}, limitInfo=`, limitInfo)
+
+    // レスポンスをサニタイズ（負の値やNaNを防ぐ）
+    const sanitizedInfo = {
+      originalLimit: Math.max(0, Number(limitInfo.originalLimit) || 0),
+      exemptionAmount: Math.max(0, Number(limitInfo.exemptionAmount) || 0),
+      finalLimit: Math.max(0, Number(limitInfo.finalLimit) || 0),
+      usedAmount: Math.max(0, Number(limitInfo.usedAmount) || 0),
+      availableAmount: Math.max(0, Number(limitInfo.availableAmount) || 0)
+    }
+
+    return NextResponse.json(sanitizedInfo)
   } catch (error) {
     console.error('Error fetching exemption limit info:', error)
     return NextResponse.json(
