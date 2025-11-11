@@ -123,7 +123,7 @@ export async function DELETE(
 
     // このカテゴリを使用している経費の数を確認
     const expenseCount = await prisma.expense.count({
-      where: { categoryId }
+      where: { category: category.name }
     })
 
     if (expenseCount > 0) {
