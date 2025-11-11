@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { User, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
+import { User, Mail, Lock, AlertCircle, CheckCircle, Home } from 'lucide-react'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -122,9 +123,17 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">プロフィール設定</h1>
-        <p className="text-gray-600 mt-2">アカウント情報を管理します</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">プロフィール設定</h1>
+          <p className="text-gray-600 mt-2">アカウント情報を管理します</p>
+        </div>
+        <Link href="/dashboard">
+          <Button variant="outline" className="flex items-center">
+            <Home className="h-4 w-4 mr-2" />
+            ホームに戻る
+          </Button>
+        </Link>
       </div>
 
       <div className="space-y-6">

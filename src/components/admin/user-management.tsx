@@ -12,7 +12,8 @@ import {
   UserPlus,
   Shield,
   Eye,
-  EyeOff
+  EyeOff,
+  UserCog
 } from 'lucide-react'
 
 interface User {
@@ -38,43 +39,25 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   useEffect(() => {
-    // TODO: APIからユーザーデータを取得
-    // 現在はモックデータ
-    setTimeout(() => {
-      setUsers([
-        {
-          id: '1',
-          name: '田中太郎',
-          email: 'tanaka@example.com',
-          role: 'CHILD',
-          canViewOthers: false,
-          createdAt: '2024-01-01T00:00:00Z',
-          lastLoginAt: '2024-01-15T10:30:00Z',
-          isActive: true
-        },
-        {
-          id: '2',
-          name: '佐藤花子',
-          email: 'sato@example.com',
-          role: 'CHILD',
-          canViewOthers: true,
-          createdAt: '2024-01-02T00:00:00Z',
-          lastLoginAt: '2024-01-14T16:45:00Z',
-          isActive: true
-        },
-        {
-          id: '3',
-          name: '山田次郎',
-          email: 'yamada@example.com',
-          role: 'CHILD',
-          canViewOthers: false,
-          createdAt: '2024-01-03T00:00:00Z',
-          isActive: false
-        }
-      ])
-      setLoading(false)
-    }, 1000)
+    fetchUsers()
   }, [masterUserId])
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/admin/users')
+      if (response.ok) {
+        const data = await response.json()
+        setUsers(data.users || [])
+      } else {
+        console.error('Failed to fetch users')
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -106,9 +89,52 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
     }
   }
 
-  const handleToggleViewPermission = (userId: string, currentPermission: boolean) => {
-    // TODO: 権限変更APIを呼び出し
-    console.log('権限変更:', userId, !currentPermission)
+  const handleToggleViewPermission = async (userId: string, currentPermission: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/permissions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canViewOthers: !currentPermission })
+      })
+
+      if (response.ok) {
+        // ユーザー一覧を再取得
+        await fetchUsers()
+      } else {
+        alert('権限の変更に失敗しました')
+      }
+    } catch (error) {
+      console.error('Error toggling view permission:', error)
+      alert('エラーが発生しました')
+    }
+  }
+
+  const handleRoleChange = async (userId: string, currentRole: 'MASTER' | 'CHILD') => {
+    const newRole = currentRole === 'MASTER' ? 'CHILD' : 'MASTER'
+    const roleLabel = newRole === 'MASTER' ? '管理者' : '一般ユーザー'
+
+    if (!confirm(`このユーザーのロールを「${roleLabel}」に変更しますか？`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole })
+      })
+
+      if (response.ok) {
+        alert('ロールを変更しました')
+        await fetchUsers()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'ロールの変更に失敗しました')
+      }
+    } catch (error) {
+      console.error('Error changing role:', error)
+      alert('エラーが発生しました')
+    }
   }
 
   if (loading) {
@@ -206,6 +232,14 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
                           <p className="text-sm font-medium text-gray-900 truncate">
                             {user.name}
                           </p>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            user.role === 'MASTER'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            <Shield className="h-3 w-3 mr-1" />
+                            {user.role === 'MASTER' ? '管理者' : '一般'}
+                          </span>
                           {user.canViewOthers && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                               <Eye className="h-3 w-3 mr-1" />
@@ -230,17 +264,29 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
 
                     <div className="flex items-center space-x-2">
                       <button
+                        onClick={() => handleRoleChange(user.id, user.role)}
+                        className={`p-2 rounded-md ${
+                          user.role === 'MASTER'
+                            ? 'text-purple-600 hover:bg-purple-50'
+                            : 'text-gray-600 hover:bg-gray-50'
+                        }`}
+                        title={user.role === 'MASTER' ? '一般ユーザーに変更' : '管理者に変更'}
+                      >
+                        <UserCog className="h-4 w-4" />
+                      </button>
+
+                      <button
                         onClick={() => handleToggleViewPermission(user.id, user.canViewOthers)}
                         className={`p-2 rounded-md ${
-                          user.canViewOthers 
-                            ? 'text-blue-600 hover:bg-blue-50' 
+                          user.canViewOthers
+                            ? 'text-blue-600 hover:bg-blue-50'
                             : 'text-gray-400 hover:bg-gray-50'
                         }`}
                         title={user.canViewOthers ? '他ユーザー閲覧権限を無効化' : '他ユーザー閲覧権限を有効化'}
                       >
                         {user.canViewOthers ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       </button>
-                      
+
                       <button
                         onClick={() => handleEditUser(user)}
                         className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-md"
@@ -248,7 +294,7 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
                       >
                         <Edit className="h-4 w-4" />
                       </button>
-                      
+
                       <button
                         onClick={() => handleDeleteUser(user.id)}
                         className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md"
