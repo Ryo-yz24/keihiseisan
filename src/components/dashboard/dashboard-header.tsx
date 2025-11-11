@@ -98,12 +98,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                   >
                     プロフィール設定
                   </a>
-                  <a
-                    href="/notifications"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    通知設定
-                  </a>
+                  <div className="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">
+                    通知設定（準備中）
+                  </div>
                   <div className="border-t border-gray-100"></div>
                   <button
                     onClick={handleSignOut}
