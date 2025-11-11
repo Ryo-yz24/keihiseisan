@@ -255,7 +255,7 @@ async function getCurrentMonthLimit(
   try {
     const limit = await prisma.expenseLimit.findFirst({
       where: {
-        masterUserId: userId,
+        targetUserId: userId,
         limitType: LimitType.MONTHLY,
         year: year,
         month: month
