@@ -163,7 +163,7 @@ export function PendingExpenses({ masterUserId }: PendingExpensesProps) {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg">
+    <div id="pending-expenses" className="bg-white shadow rounded-lg">
       <div className="px-4 py-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg leading-6 font-medium text-gray-900">

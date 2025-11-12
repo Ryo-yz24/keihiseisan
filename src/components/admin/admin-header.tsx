@@ -74,8 +74,8 @@ export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
     // 通知タイプに応じた遷移先を決定
     switch (notification.type) {
       case 'EXPENSE_SUBMITTED':
-        // 経費申請通知 → 管理画面の経費承認タブ
-        return '/admin/expenses'
+        // 経費申請通知 → ダッシュボード内の承認待ち経費セクション
+        return '/dashboard#pending-expenses'
 
       case 'EXPENSE_APPROVED':
       case 'EXPENSE_REJECTED':
