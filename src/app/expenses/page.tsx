@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
+import { PageHeader } from '@/components/common/page-header'
 import { ExpenseManagement } from '@/components/expenses/expense-management'
 import { prisma } from '@/lib/prisma'
 
@@ -135,10 +136,16 @@ export default async function ExpensesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ExpenseManagement
-        userId={session.user.id}
-        userRole={session.user.role}
+      <PageHeader
+        title="経費申請"
+        subtitle="経費の申請と管理"
       />
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <ExpenseManagement
+          userId={session.user.id}
+          userRole={session.user.role}
+        />
+      </div>
     </div>
   )
 }
