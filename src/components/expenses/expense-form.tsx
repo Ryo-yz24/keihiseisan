@@ -8,8 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertCircle, CheckCircle, Upload, X, Calendar, DollarSign, Home } from 'lucide-react'
-import Link from 'next/link'
+import { AlertCircle, CheckCircle, Upload, X, Calendar, DollarSign } from 'lucide-react'
 
 const expenseFormSchema = z.object({
   expenseDate: z.string().min(1, '日付を選択してください'),
@@ -193,26 +192,17 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center space-x-2">
             <DollarSign className="h-6 w-6" />
             <span>{isEditMode ? '経費編集' : '経費申請'}</span>
-          </div>
-          <div className="flex items-center space-x-3">
-            {isEditMode && (
-              <span className="text-sm font-normal text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                編集モード
-              </span>
-            )}
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <Home className="h-4 w-4 mr-2" />
-              ホーム
-            </Link>
-          </div>
-        </CardTitle>
+          </CardTitle>
+          {isEditMode && (
+            <span className="text-sm font-normal text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+              編集モード
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit((data) => onSubmit(data, false))} className="space-y-6">
@@ -353,7 +343,7 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
             {existingImages.length > 0 && (
               <div className="mb-4">
                 <div className="text-sm text-gray-600 mb-2">既存の画像</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
                   {existingImages.map((image) => (
                     <div key={image.id} className="relative">
                       <img
@@ -390,7 +380,7 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
             </div>
 
             {images.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 px-2">
                 {images.map((image, index) => (
                   <div key={index} className="relative">
                     <img
