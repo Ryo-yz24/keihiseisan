@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Bell, Settings, LogOut, User, Shield, X, CheckCircle, AlertTriangle, Info } from 'lucide-react'
 
 interface Notification {
@@ -26,6 +27,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
+  const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [showNotifications, setShowNotifications] = useState(false)
@@ -65,6 +67,61 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
       }
     } catch (error) {
       console.error('Error fetching notifications:', error)
+    }
+  }
+
+  const getNotificationLink = (notification: Notification): string => {
+    // 通知タイプに応じた遷移先を決定
+    switch (notification.type) {
+      case 'EXPENSE_SUBMITTED':
+        // 経費申請通知（子アカウント用） → 経費一覧
+        return '/expenses'
+
+      case 'EXPENSE_APPROVED':
+      case 'EXPENSE_REJECTED':
+        // 経費承認/却下通知 → 経費一覧
+        return '/expenses'
+
+      case 'LIMIT_INCREASE_REQUESTED':
+        // 上限解放申請通知（子アカウント用） → ダッシュボード
+        return '/dashboard'
+
+      case 'LIMIT_INCREASE_APPROVED':
+      case 'LIMIT_INCREASE_REJECTED':
+        // 上限解放承認/却下通知 → ダッシュボード
+        return '/dashboard'
+
+      default:
+        // デフォルトはダッシュボード
+        return '/dashboard'
+    }
+  }
+
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      // 未読の場合のみ既読処理
+      if (!notification.isRead) {
+        await fetch('/api/notifications', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notificationId: notification.id })
+        })
+
+        // ローカル状態を更新
+        setNotifications(prev => prev.map(n =>
+          n.id === notification.id ? { ...n, isRead: true } : n
+        ))
+        setUnreadCount(prev => Math.max(0, prev - 1))
+      }
+
+      // 通知パネルを閉じる
+      setShowNotifications(false)
+
+      // 適切なページに遷移
+      const link = getNotificationLink(notification)
+      router.push(link)
+    } catch (error) {
+      console.error('Error handling notification click:', error)
     }
   }
 
@@ -225,7 +282,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                         {notifications.map((notification) => (
                           <div
                             key={notification.id}
-                            onClick={() => handleMarkAsRead(notification.id)}
+                            onClick={() => handleNotificationClick(notification)}
                             className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
                               !notification.isRead ? 'bg-blue-50' : ''
                             }`}
