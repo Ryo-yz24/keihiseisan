@@ -79,8 +79,8 @@ export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
 
       case 'EXPENSE_APPROVED':
       case 'EXPENSE_REJECTED':
-        // 経費承認/却下通知 → ダッシュボードの経費一覧
-        return '/dashboard/expenses'
+        // 経費承認/却下通知 → 経費一覧ページ
+        return '/expenses'
 
       case 'LIMIT_INCREASE_REQUESTED':
         // 上限解放申請通知 → 管理画面の上限解放管理タブ
