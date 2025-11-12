@@ -74,8 +74,10 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
     // 通知タイプに応じた遷移先を決定
     switch (notification.type) {
       case 'EXPENSE_SUBMITTED':
-        // 経費申請通知（子アカウント用） → 経費一覧
-        return '/expenses'
+        // 経費申請通知
+        // マスターアカウント → ダッシュボードの承認待ちセクション
+        // 子アカウント → 経費一覧
+        return user.role === 'MASTER' ? '/dashboard#pending-expenses' : '/expenses'
 
       case 'EXPENSE_APPROVED':
       case 'EXPENSE_REJECTED':
