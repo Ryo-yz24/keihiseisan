@@ -84,7 +84,7 @@ export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
 
       case 'LIMIT_INCREASE_REQUESTED':
         // 上限解放申請通知 → 管理画面の上限解放管理タブ
-        return '/admin?tab=exemptions'
+        return '/admin?tab=exemption'
 
       case 'LIMIT_INCREASE_APPROVED':
       case 'LIMIT_INCREASE_REJECTED':

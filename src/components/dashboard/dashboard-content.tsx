@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ExpenseStats } from '@/lib/expense-utils'
 import { DashboardHeader } from './dashboard-header'
@@ -26,6 +26,20 @@ interface DashboardContentProps {
 
 export function DashboardContent({ user, stats }: DashboardContentProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'reports'>('overview')
+
+  // URLハッシュによるスクロール処理
+  useEffect(() => {
+    const hash = window.location.hash.slice(1) // '#pending-expenses' → 'pending-expenses'
+    if (hash) {
+      // DOM構築完了後にスクロール
+      setTimeout(() => {
+        const element = document.getElementById(hash)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -69,13 +83,15 @@ export function DashboardContent({ user, stats }: DashboardContentProps) {
               )}
               
               {/* 上限解放情報カード */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <ExemptionInfoCard 
-                  userId={user.id} 
-                  year={new Date().getFullYear()} 
-                  month={new Date().getMonth() + 1} 
-                />
-              </div>
+              {stats.exemptionInfo && (
+                <div id="exemption-info" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <ExemptionInfoCard
+                    exemptionInfo={stats.exemptionInfo}
+                    year={new Date().getFullYear()}
+                    month={new Date().getMonth() + 1}
+                  />
+                </div>
+              )}
               
               {/* グラフエリア */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

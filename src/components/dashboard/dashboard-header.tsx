@@ -83,13 +83,13 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
         return '/expenses'
 
       case 'LIMIT_INCREASE_REQUESTED':
-        // 上限解放申請通知（子アカウント用） → ダッシュボード
-        return '/dashboard'
+        // 上限解放申請通知（子アカウント用） → ダッシュボードの上限解放情報
+        return '/dashboard#exemption-info'
 
       case 'LIMIT_INCREASE_APPROVED':
       case 'LIMIT_INCREASE_REJECTED':
-        // 上限解放承認/却下通知 → ダッシュボード
-        return '/dashboard'
+        // 上限解放承認/却下通知 → ダッシュボードの上限解放情報
+        return '/dashboard#exemption-info'
 
       default:
         // デフォルトはダッシュボード

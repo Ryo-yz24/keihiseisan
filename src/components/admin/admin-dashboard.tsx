@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { UserRole } from '@prisma/client'
 import { AdminHeader } from './admin-header'
 import { AdminSidebar } from './admin-sidebar'
@@ -28,8 +29,21 @@ interface AdminDashboardProps {
 type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'expense-approval' | 'child-accounts' | 'audit' | 'reports' | 'settings'
 
 export function AdminDashboard({ user }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<AdminTab>('users')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // URLクエリパラメータからタブを取得、なければ'users'をデフォルトに
+  const tabFromUrl = searchParams?.get('tab') as AdminTab | null
+  const [activeTab, setActiveTab] = useState<AdminTab>(tabFromUrl || 'users')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // URLのクエリパラメータが変更された時にタブを更新
+  useEffect(() => {
+    const tabParam = searchParams?.get('tab') as AdminTab | null
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam)
+    }
+  }, [searchParams])
 
   const renderTabContent = () => {
     switch (activeTab) {
