@@ -3,6 +3,7 @@
 import { signOut } from 'next-auth/react'
 import { UserRole } from '@prisma/client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Menu, Bell, Settings, LogOut, User, Shield, AlertTriangle, Home, Check, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -20,45 +21,46 @@ interface AdminHeaderProps {
 
 interface Notification {
   id: string
+  type: string
+  title: string
   message: string
-  type: 'expense_pending' | 'exemption_pending' | 'expense_approved' | 'expense_rejected'
+  isRead: boolean
+  relatedExpenseId?: string | null
   createdAt: string
-  read: boolean
-  link?: string
+  relatedExpense?: {
+    id: string
+    amount: number
+    vendor: string
+    category: string
+  }
 }
 
 export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
+  const router = useRouter()
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    // ローカルストレージから既読通知IDを取得
-    const readNotifications = JSON.parse(localStorage.getItem('readNotifications') || '[]')
+    fetchNotifications()
 
-    // 通知を取得（仮のデータ）
-    // 実際のAPIエンドポイントを実装する場合は、ここでfetchを呼ぶ
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        message: '新しい経費申請が届いています',
-        type: 'expense_pending',
-        createdAt: new Date().toISOString(),
-        read: readNotifications.includes('1'),
-        link: '/admin?tab=expenses'
-      },
-      {
-        id: '2',
-        message: '上限解放申請が届いています',
-        type: 'exemption_pending',
-        createdAt: new Date(Date.now() - 3600000).toISOString(),
-        read: readNotifications.includes('2'),
-        link: '/admin?tab=exemptions'
-      }
-    ]
-    setNotifications(mockNotifications)
-    setUnreadCount(mockNotifications.filter(n => !n.read).length)
+    // 30秒ごとに通知を再取得
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
   }, [])
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch('/api/notifications')
+      if (response.ok) {
+        const data = await response.json()
+        setNotifications(data.notifications || [])
+        setUnreadCount(data.unreadCount || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    }
+  }
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/auth/login' })
@@ -68,37 +70,89 @@ export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
     setShowNotifications(!showNotifications)
   }
 
-  const handleNotificationClick = (notification: Notification) => {
-    // 未読の場合のみカウントを減らす
-    if (!notification.read) {
-      setUnreadCount(prev => Math.max(0, prev - 1))
+  const getNotificationLink = (notification: Notification): string => {
+    // 通知タイプに応じた遷移先を決定
+    switch (notification.type) {
+      case 'EXPENSE_SUBMITTED':
+        // 経費申請通知 → 管理画面の経費承認タブ
+        return '/admin/expenses'
 
-      // ローカルストレージに既読情報を保存
-      const readNotifications = JSON.parse(localStorage.getItem('readNotifications') || '[]')
-      readNotifications.push(notification.id)
-      localStorage.setItem('readNotifications', JSON.stringify(readNotifications))
+      case 'EXPENSE_APPROVED':
+      case 'EXPENSE_REJECTED':
+        // 経費承認/却下通知 → ダッシュボードの経費一覧
+        return '/dashboard/expenses'
+
+      case 'LIMIT_INCREASE_REQUESTED':
+        // 上限解放申請通知 → 管理画面の上限解放管理タブ
+        return '/admin?tab=exemptions'
+
+      case 'LIMIT_INCREASE_APPROVED':
+      case 'LIMIT_INCREASE_REJECTED':
+        // 上限解放承認/却下通知 → ダッシュボード
+        return '/dashboard'
+
+      default:
+        // デフォルトは管理画面Top
+        return '/admin'
     }
+  }
 
-    // 既読にする
-    setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      // 未読の場合のみ既読処理
+      if (!notification.isRead) {
+        await fetch('/api/notifications', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notificationId: notification.id })
+        })
 
-    // 通知パネルを閉じる
-    setShowNotifications(false)
+        // ローカル状態を更新
+        setNotifications(prev => prev.map(n =>
+          n.id === notification.id ? { ...n, isRead: true } : n
+        ))
+        setUnreadCount(prev => Math.max(0, prev - 1))
+      }
 
-    // リンクがある場合は遷移
-    if (notification.link) {
-      window.location.href = notification.link
+      // 通知パネルを閉じる
+      setShowNotifications(false)
+
+      // 適切なページに遷移
+      const link = getNotificationLink(notification)
+      router.push(link)
+    } catch (error) {
+      console.error('Error handling notification click:', error)
+    }
+  }
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAllAsRead: true })
+      })
+
+      if (response.ok) {
+        // 通知を再取得
+        await fetchNotifications()
+        setShowNotifications(false)
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error)
     }
   }
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'expense_pending':
-      case 'exemption_pending':
+      case 'EXPENSE_SUBMITTED':
+      case 'LIMIT_INCREASE_REQUESTED':
         return <AlertTriangle className="h-4 w-4 text-yellow-600" />
-      case 'expense_approved':
+      case 'EXPENSE_APPROVED':
+      case 'LIMIT_INCREASE_APPROVED':
         return <Check className="h-4 w-4 text-green-600" />
-      case 'expense_rejected':
+      case 'EXPENSE_REJECTED':
+      case 'LIMIT_INCREASE_REJECTED':
         return <X className="h-4 w-4 text-red-600" />
       default:
         return <Bell className="h-4 w-4 text-gray-600" />
@@ -177,7 +231,7 @@ export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
                             <div
                               key={notification.id}
                               className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                                !notification.read ? 'bg-blue-50' : ''
+                                !notification.isRead ? 'bg-blue-50' : ''
                               }`}
                               onClick={() => handleNotificationClick(notification)}
                             >
@@ -186,14 +240,19 @@ export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
                                   {getNotificationIcon(notification.type)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
-                                    {notification.message}
+                                  <p className={`text-sm ${!notification.isRead ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                                    {notification.title || notification.message}
                                   </p>
+                                  {notification.title && (
+                                    <p className="text-xs text-gray-600 mt-0.5">
+                                      {notification.message}
+                                    </p>
+                                  )}
                                   <p className="text-xs text-gray-500 mt-1">
                                     {new Date(notification.createdAt).toLocaleString('ja-JP')}
                                   </p>
                                 </div>
-                                {!notification.read && (
+                                {!notification.isRead && (
                                   <div className="flex-shrink-0">
                                     <span className="inline-block h-2 w-2 bg-blue-600 rounded-full"></span>
                                   </div>
@@ -205,21 +264,13 @@ export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
                       )}
                     </div>
 
-                    {notifications.length > 0 && (
+                    {notifications.length > 0 && unreadCount > 0 && (
                       <div className="p-3 border-t border-gray-200 text-center">
                         <button
                           className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                          onClick={() => {
-                            // 全通知を既読としてローカルストレージに保存
-                            const allNotificationIds = notifications.map(n => n.id)
-                            localStorage.setItem('readNotifications', JSON.stringify(allNotificationIds))
-
-                            setNotifications([])
-                            setUnreadCount(0)
-                            setShowNotifications(false)
-                          }}
+                          onClick={handleMarkAllAsRead}
                         >
-                          すべてクリア
+                          すべて既読にする
                         </button>
                       </div>
                     )}

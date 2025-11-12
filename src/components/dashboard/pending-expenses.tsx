@@ -1,19 +1,32 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Clock, CheckCircle, XCircle, Eye } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, Eye, AlertCircle, X, Image as ImageIcon } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 interface PendingExpense {
   id: string
+  userId: string
   amount: number
+  taxRate: number
+  taxAmount: number
+  amountWithoutTax: number
   vendor: string
   purpose: string
   category: string
   expenseDate: string
+  status: string
   user: {
+    id: string
     name: string
     email: string
   }
+  images?: Array<{
+    id: string
+    filePath: string
+    fileName: string
+  }>
   createdAt: string
 }
 
@@ -24,42 +37,36 @@ interface PendingExpensesProps {
 export function PendingExpenses({ masterUserId }: PendingExpensesProps) {
   const [expenses, setExpenses] = useState<PendingExpense[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [selectedExpense, setSelectedExpense] = useState<PendingExpense | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
 
   useEffect(() => {
-    // TODO: APIからデータを取得
-    // 現在はモックデータ
-    setTimeout(() => {
-      setExpenses([
-        {
-          id: '1',
-          amount: 15000,
-          vendor: '株式会社サンプル',
-          purpose: '会議費',
-          category: '飲食費（接待）',
-          expenseDate: '2024-01-15',
-          user: {
-            name: '田中太郎',
-            email: 'tanaka@example.com'
-          },
-          createdAt: '2024-01-15T10:30:00Z'
-        },
-        {
-          id: '2',
-          amount: 8500,
-          vendor: '交通費',
-          purpose: '出張費',
-          category: '交通費',
-          expenseDate: '2024-01-14',
-          user: {
-            name: '佐藤花子',
-            email: 'sato@example.com'
-          },
-          createdAt: '2024-01-14T16:45:00Z'
-        }
-      ])
-      setLoading(false)
-    }, 1000)
+    fetchExpenses()
   }, [masterUserId])
+
+  const fetchExpenses = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/admin/expenses?status=PENDING')
+
+      if (!response.ok) {
+        throw new Error('経費の取得に失敗しました')
+      }
+
+      const data = await response.json()
+      setExpenses(data.expenses || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ja-JP', {
@@ -76,14 +83,63 @@ export function PendingExpenses({ masterUserId }: PendingExpensesProps) {
     })
   }
 
+  const handleViewDetail = (expense: PendingExpense) => {
+    setSelectedExpense(expense)
+    setIsDetailOpen(true)
+  }
+
   const handleApprove = async (expenseId: string) => {
-    // TODO: 承認APIを呼び出し
-    console.log('承認:', expenseId)
+    try {
+      setError(null)
+      const response = await fetch(`/api/admin/expenses/${expenseId}/approve`, {
+        method: 'PATCH',
+      })
+
+      if (!response.ok) {
+        throw new Error('承認に失敗しました')
+      }
+
+      setSuccess('経費を承認しました')
+      setIsDetailOpen(false)
+      await fetchExpenses()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    }
   }
 
   const handleReject = async (expenseId: string) => {
-    // TODO: 却下APIを呼び出し
-    console.log('却下:', expenseId)
+    if (!rejectReason.trim()) {
+      setError('却下理由を入力してください')
+      return
+    }
+
+    try {
+      setError(null)
+      const response = await fetch(`/api/admin/expenses/${expenseId}/reject`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: rejectReason }),
+      })
+
+      if (!response.ok) {
+        throw new Error('却下に失敗しました')
+      }
+
+      setSuccess('経費を却下しました')
+      setRejectReason('')
+      setIsRejectDialogOpen(false)
+      setIsDetailOpen(false)
+      await fetchExpenses()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    }
+  }
+
+  const openRejectDialog = (expense: PendingExpense) => {
+    setSelectedExpense(expense)
+    setIsRejectDialogOpen(true)
   }
 
   if (loading) {
@@ -119,6 +175,30 @@ export function PendingExpenses({ masterUserId }: PendingExpensesProps) {
           </span>
         </div>
 
+        {/* Success Message */}
+        {success && (
+          <div className="mb-4 rounded-md bg-green-50 p-4">
+            <div className="flex">
+              <CheckCircle className="h-5 w-5 text-green-400" />
+              <div className="ml-3">
+                <p className="text-sm font-medium text-green-800">{success}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 rounded-md bg-red-50 p-4">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {expenses.length === 0 ? (
           <div className="text-center py-8">
             <Clock className="mx-auto h-12 w-12 text-gray-400" />
@@ -139,7 +219,7 @@ export function PendingExpenses({ masterUserId }: PendingExpensesProps) {
                         {expense.category}
                       </span>
                     </div>
-                    
+
                     <div className="space-y-1 text-sm text-gray-600">
                       <p><span className="font-medium">支払先:</span> {expense.vendor}</p>
                       <p><span className="font-medium">利用目的:</span> {expense.purpose}</p>
@@ -150,13 +230,13 @@ export function PendingExpenses({ masterUserId }: PendingExpensesProps) {
 
                   <div className="flex items-center space-x-2 ml-4">
                     <button
-                      onClick={() => console.log('詳細表示:', expense.id)}
+                      onClick={() => handleViewDetail(expense)}
                       className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       <Eye className="h-3 w-3 mr-1" />
                       詳細
                     </button>
-                    
+
                     <button
                       onClick={() => handleApprove(expense.id)}
                       className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -164,9 +244,9 @@ export function PendingExpenses({ masterUserId }: PendingExpensesProps) {
                       <CheckCircle className="h-3 w-3 mr-1" />
                       承認
                     </button>
-                    
+
                     <button
-                      onClick={() => handleReject(expense.id)}
+                      onClick={() => openRejectDialog(expense)}
                       className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     >
                       <XCircle className="h-3 w-3 mr-1" />
@@ -179,6 +259,166 @@ export function PendingExpenses({ masterUserId }: PendingExpensesProps) {
           </div>
         )}
       </div>
+
+      {/* 詳細モーダル */}
+      {selectedExpense && (
+        <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>経費詳細</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* 基本情報 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">金額</label>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">
+                    {formatCurrency(selectedExpense.amount)}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">カテゴリ</label>
+                  <p className="mt-1 text-gray-900">{selectedExpense.category}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">支払先</label>
+                  <p className="mt-1 text-gray-900">{selectedExpense.vendor}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">利用日</label>
+                  <p className="mt-1 text-gray-900">{formatDate(selectedExpense.expenseDate)}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium text-gray-500">利用目的</label>
+                  <p className="mt-1 text-gray-900">{selectedExpense.purpose}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">申請者</label>
+                  <p className="mt-1 text-gray-900">{selectedExpense.user.name}</p>
+                  <p className="text-sm text-gray-500">{selectedExpense.user.email}</p>
+                </div>
+              </div>
+
+              {/* 税額詳細 */}
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-2">税額詳細</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">税抜金額:</span>
+                    <span className="text-gray-900">{formatCurrency(selectedExpense.amountWithoutTax)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">消費税 ({(selectedExpense.taxRate * 100).toFixed(0)}%):</span>
+                    <span className="text-gray-900">{formatCurrency(selectedExpense.taxAmount)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span className="text-gray-900">税込合計:</span>
+                    <span className="text-gray-900">{formatCurrency(selectedExpense.amount)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 領収書画像 */}
+              {selectedExpense.images && selectedExpense.images.length > 0 && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
+                    <ImageIcon className="h-4 w-4 mr-1" />
+                    領収書画像
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedExpense.images.map((image) => (
+                      <div key={image.id} className="border rounded-lg overflow-hidden">
+                        <img
+                          src={image.filePath}
+                          alt={image.fileName}
+                          className="w-full h-auto"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* アクションボタン */}
+              <div className="flex justify-end space-x-3 border-t pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDetailOpen(false)}
+                >
+                  閉じる
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setIsDetailOpen(false)
+                    openRejectDialog(selectedExpense)
+                  }}
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  却下
+                </Button>
+                <Button
+                  onClick={() => handleApprove(selectedExpense.id)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  承認
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* 却下理由入力ダイアログ */}
+      {selectedExpense && (
+        <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>経費を却下</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                この経費申請を却下します。却下理由を入力してください。
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  却下理由 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  rows={4}
+                  placeholder="却下理由を入力してください"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsRejectDialogOpen(false)
+                    setRejectReason('')
+                  }}
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleReject(selectedExpense.id)}
+                  disabled={!rejectReason.trim()}
+                >
+                  却下する
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
