@@ -19,7 +19,7 @@ export async function PATCH(
     }
 
     const { id } = params
-    const { targetUserId, limitType, limitAmount, year, month } = await request.json()
+    const { targetUserId, limitType, limitAmount, year, month, startMonth, endMonth } = await request.json()
 
     const existingLimit = await prisma.expenseLimit.findUnique({
       where: { id },
@@ -41,8 +41,19 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid limit type' }, { status: 400 })
     }
 
-    if (limitType === 'MONTHLY' && !month) {
-      return NextResponse.json({ error: 'Month is required for monthly limits' }, { status: 400 })
+    // 月次の場合は月または期間が必須
+    if (limitType === 'MONTHLY') {
+      const hasMonth = month !== null && month !== undefined
+      const hasPeriod = (startMonth !== null && startMonth !== undefined) && (endMonth !== null && endMonth !== undefined)
+
+      if (!hasMonth && !hasPeriod) {
+        return NextResponse.json({ error: 'Month or period (startMonth and endMonth) is required for monthly limits' }, { status: 400 })
+      }
+
+      // 期間の場合、開始月 <= 終了月をチェック
+      if (hasPeriod && parseInt(startMonth) > parseInt(endMonth)) {
+        return NextResponse.json({ error: 'Start month must be less than or equal to end month' }, { status: 400 })
+      }
     }
 
     const amount = parseFloat(limitAmount)
@@ -67,6 +78,8 @@ export async function PATCH(
         limitType,
         year: parseInt(year),
         month: month ? parseInt(month) : null,
+        startMonth: startMonth ? parseInt(startMonth) : null,
+        endMonth: endMonth ? parseInt(endMonth) : null,
         NOT: {
           id: id,
         },
@@ -74,8 +87,8 @@ export async function PATCH(
     })
 
     if (duplicateLimit) {
-      return NextResponse.json({ 
-        error: 'この条件の限度額は既に設定されています。' 
+      return NextResponse.json({
+        error: 'この条件の限度額は既に設定されています。'
       }, { status: 400 })
     }
 
@@ -87,6 +100,8 @@ export async function PATCH(
         limitAmount: amount,
         year: parseInt(year),
         month: month ? parseInt(month) : null,
+        startMonth: startMonth ? parseInt(startMonth) : null,
+        endMonth: endMonth ? parseInt(endMonth) : null,
       },
       include: {
         masterUser: {

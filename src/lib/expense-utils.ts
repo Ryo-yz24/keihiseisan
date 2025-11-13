@@ -149,13 +149,30 @@ export async function getExpenseStats(
     let exemptionInfo = null
 
     if (userRole === 'MASTER') {
+      const currentMonth = now.getMonth() + 1
       const currentLimit = await prisma.expenseLimit.findFirst({
         where: {
           masterUserId: userId,
           limitType: 'MONTHLY',
           year: now.getFullYear(),
-          month: now.getMonth() + 1
-        }
+          OR: [
+            // 単月設定（上限解放申請用）
+            {
+              month: currentMonth,
+              startMonth: null,
+              endMonth: null
+            },
+            // 期間設定
+            {
+              startMonth: { lte: currentMonth },
+              endMonth: { gte: currentMonth },
+              month: null
+            }
+          ]
+        },
+        orderBy: [
+          { month: 'desc' } // 単月設定を優先（nullより数値を優先）
+        ]
       })
 
       if (currentLimit) {
@@ -168,21 +185,49 @@ export async function getExpenseStats(
       }
     } else {
       // 子アカウントの場合、上限解放情報を並列取得
+      const currentMonth = now.getMonth() + 1
       const [limit, exemption] = await Promise.all([
         // 特定ユーザー向けの上限 → 全体設定の順で検索
+        // 優先順位: 1) 単月設定（上限解放用） 2) 期間設定 3) 全体設定
         prisma.expenseLimit.findFirst({
           where: {
             masterUserId: masterUserId || undefined,
             limitType: 'MONTHLY',
             year: now.getFullYear(),
-            month: now.getMonth() + 1,
             OR: [
-              { targetUserId: userId }, // 特定ユーザー向け
-              { targetUserId: null }     // 全体設定
+              // 優先度1: 特定ユーザー向けの単月設定（上限解放申請用）
+              {
+                targetUserId: userId,
+                month: currentMonth,
+                startMonth: null,
+                endMonth: null
+              },
+              // 優先度2: 特定ユーザー向けの期間設定
+              {
+                targetUserId: userId,
+                startMonth: { lte: currentMonth },
+                endMonth: { gte: currentMonth },
+                month: null
+              },
+              // 優先度3: 全体の単月設定
+              {
+                targetUserId: null,
+                month: currentMonth,
+                startMonth: null,
+                endMonth: null
+              },
+              // 優先度4: 全体の期間設定
+              {
+                targetUserId: null,
+                startMonth: { lte: currentMonth },
+                endMonth: { gte: currentMonth },
+                month: null
+              }
             ]
           },
           orderBy: [
-            { targetUserId: 'desc' } // nullでない（特定ユーザー向け）を優先
+            { targetUserId: 'desc' }, // 特定ユーザー向けを優先
+            { month: 'desc' }          // 単月設定を優先（nullより数値を優先）
           ]
         }),
         prisma.limitExemptionRequest.findFirst({

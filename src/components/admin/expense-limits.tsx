@@ -18,13 +18,30 @@ const limitFormSchema = z.object({
   limitAmount: z.string().min(1, '金額を入力してください'),
   year: z.string().min(1, '年を選択してください'),
   month: z.string().optional(),
+  isPeriod: z.boolean().optional(),
+  startMonth: z.string().optional(),
+  endMonth: z.string().optional(),
 }).refine((data) => {
-  if (data.limitType === 'MONTHLY' && !data.month) {
-    return false
+  if (data.limitType === 'MONTHLY') {
+    // 期間指定の場合
+    if (data.isPeriod) {
+      if (!data.startMonth || !data.endMonth) {
+        return false
+      }
+      // 開始月 <= 終了月をチェック
+      if (parseInt(data.startMonth) > parseInt(data.endMonth)) {
+        return false
+      }
+    } else {
+      // 単月指定の場合
+      if (!data.month) {
+        return false
+      }
+    }
   }
   return true
 }, {
-  message: '月次限度額の場合、月を選択してください',
+  message: '月次限度額の場合、適切な期間を選択してください',
   path: ['month'],
 })
 
@@ -38,6 +55,8 @@ interface ExpenseLimit {
   limitAmount: number
   year: number
   month: number | null
+  startMonth: number | null
+  endMonth: number | null
   createdAt: string
   updatedAt: string
   targetUser?: {
@@ -75,6 +94,9 @@ export function ExpenseLimits({ masterUserId }: ExpenseLimitsProps) {
       limitAmount: '',
       year: new Date().getFullYear().toString(),
       month: (new Date().getMonth() + 1).toString(),
+      isPeriod: false,
+      startMonth: '',
+      endMonth: '',
     },
   })
 
@@ -85,12 +107,16 @@ export function ExpenseLimits({ masterUserId }: ExpenseLimitsProps) {
 
   useEffect(() => {
     if (editingLimit) {
+      const isPeriod = !!(editingLimit.startMonth && editingLimit.endMonth)
       form.reset({
         targetUserId: editingLimit.targetUserId || undefined,
         limitType: editingLimit.limitType,
         limitAmount: editingLimit.limitAmount.toString(),
         year: editingLimit.year.toString(),
         month: editingLimit.month?.toString() || '',
+        isPeriod,
+        startMonth: editingLimit.startMonth?.toString() || '',
+        endMonth: editingLimit.endMonth?.toString() || '',
       })
     } else {
       form.reset({
@@ -99,6 +125,9 @@ export function ExpenseLimits({ masterUserId }: ExpenseLimitsProps) {
         limitAmount: '',
         year: new Date().getFullYear().toString(),
         month: (new Date().getMonth() + 1).toString(),
+        isPeriod: false,
+        startMonth: '',
+        endMonth: '',
       })
     }
   }, [editingLimit, form])
@@ -141,13 +170,15 @@ export function ExpenseLimits({ masterUserId }: ExpenseLimitsProps) {
   const onSubmit = async (data: LimitFormData) => {
     try {
       setError(null)
-      
+
       const payload = {
         targetUserId: data.targetUserId === '__all__' ? null : (data.targetUserId || null),
         limitType: data.limitType,
         limitAmount: parseFloat(data.limitAmount),
         year: parseInt(data.year),
-        month: data.month ? parseInt(data.month) : null,
+        month: data.isPeriod ? null : (data.month ? parseInt(data.month) : null),
+        startMonth: data.isPeriod && data.startMonth ? parseInt(data.startMonth) : null,
+        endMonth: data.isPeriod && data.endMonth ? parseInt(data.endMonth) : null,
       }
 
       let response
@@ -276,13 +307,60 @@ export function ExpenseLimits({ masterUserId }: ExpenseLimitsProps) {
                 </Select>
               </div>
               {form.watch('limitType') === 'MONTHLY' && (
-                <div className="space-y-2">
-                  <Label>月</Label>
-                  <Select value={form.watch('month') || undefined} onValueChange={(value) => form.setValue('month', value)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{months.map((month) => <SelectItem key={month} value={month.toString()}>{month}月</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="isPeriod"
+                        checked={form.watch('isPeriod') || false}
+                        onChange={(e) => {
+                          form.setValue('isPeriod', e.target.checked)
+                          // チェックを切り替えた時にフィールドをリセット
+                          if (e.target.checked) {
+                            form.setValue('month', '')
+                          } else {
+                            form.setValue('startMonth', '')
+                            form.setValue('endMonth', '')
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      />
+                      <Label htmlFor="isPeriod" className="text-sm font-normal cursor-pointer">
+                        期間で設定（複数月に適用）
+                      </Label>
+                    </div>
+                  </div>
+                  {form.watch('isPeriod') ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>開始月</Label>
+                        <Select value={form.watch('startMonth') || undefined} onValueChange={(value) => form.setValue('startMonth', value)}>
+                          <SelectTrigger><SelectValue placeholder="選択" /></SelectTrigger>
+                          <SelectContent>{months.map((month) => <SelectItem key={month} value={month.toString()}>{month}月</SelectItem>)}</SelectContent>
+                        </Select>
+                        {form.formState.errors.startMonth && <p className="text-sm text-red-600">{form.formState.errors.startMonth.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label>終了月</Label>
+                        <Select value={form.watch('endMonth') || undefined} onValueChange={(value) => form.setValue('endMonth', value)}>
+                          <SelectTrigger><SelectValue placeholder="選択" /></SelectTrigger>
+                          <SelectContent>{months.map((month) => <SelectItem key={month} value={month.toString()}>{month}月</SelectItem>)}</SelectContent>
+                        </Select>
+                        {form.formState.errors.endMonth && <p className="text-sm text-red-600">{form.formState.errors.endMonth.message}</p>}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>月（上限解放申請用の単月設定）</Label>
+                      <Select value={form.watch('month') || undefined} onValueChange={(value) => form.setValue('month', value)}>
+                        <SelectTrigger><SelectValue placeholder="選択" /></SelectTrigger>
+                        <SelectContent>{months.map((month) => <SelectItem key={month} value={month.toString()}>{month}月</SelectItem>)}</SelectContent>
+                      </Select>
+                      {form.formState.errors.month && <p className="text-sm text-red-600">{form.formState.errors.month.message}</p>}
+                    </div>
+                  )}
+                </>
               )}
               <div className="flex justify-end space-x-3 pt-4">
                 <Button type="button" variant="outline" onClick={() => { setIsDialogOpen(false); setEditingLimit(null) }}>キャンセル</Button>
@@ -319,7 +397,17 @@ export function ExpenseLimits({ masterUserId }: ExpenseLimitsProps) {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div><div className="text-gray-500">限度額</div><div className="text-lg font-semibold text-gray-900">{formatCurrency(limit.limitAmount)}</div></div>
-                        <div><div className="text-gray-500">対象期間</div><div className="font-medium text-gray-900">{limit.year}年{limit.month && ` ${limit.month}月`}</div></div>
+                        <div>
+                          <div className="text-gray-500">対象期間</div>
+                          <div className="font-medium text-gray-900">
+                            {limit.year}年
+                            {limit.startMonth && limit.endMonth ? (
+                              <span className="text-blue-600"> {limit.startMonth}月 〜 {limit.endMonth}月</span>
+                            ) : limit.month ? (
+                              <span> {limit.month}月</span>
+                            ) : null}
+                          </div>
+                        </div>
                         <div><div className="text-gray-500">作成日</div><div className="font-medium text-gray-900">{new Date(limit.createdAt).toLocaleDateString('ja-JP')}</div></div>
                       </div>
                     </div>
@@ -337,7 +425,7 @@ export function ExpenseLimits({ masterUserId }: ExpenseLimitsProps) {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>限度額を削除しますか？</AlertDialogTitle><AlertDialogDescription>この操作は取り消せません。本当に削除してもよろしいですか？</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel onClick={() => setDeleteTarget(null)}>キャンセル</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">削除</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogFooter><AlertDialogCancel onClick={() => setDeleteTarget(null)}>キャンセル</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-blue-600 hover:bg-blue-700">削除</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

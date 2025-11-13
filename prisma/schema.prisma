@@ -118,6 +118,8 @@ model ExpenseLimit {
   limitAmount  Decimal   @db.Decimal(10, 2)
   year         Int
   month        Int?
+  startMonth   Int?
+  endMonth     Int?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   masterUser   User      @relation(fields: [masterUserId], references: [id])

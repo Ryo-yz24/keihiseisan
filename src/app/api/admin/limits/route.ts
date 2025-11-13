@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { targetUserId, limitType, limitAmount, year, month } = await request.json()
+    const { targetUserId, limitType, limitAmount, year, month, startMonth, endMonth } = await request.json()
 
     // バリデーション
     if (!limitType || !limitAmount || !year) {
@@ -82,9 +82,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid limit type' }, { status: 400 })
     }
 
-    // 月次の場合は月が必須
-    if (limitType === 'MONTHLY' && !month) {
-      return NextResponse.json({ error: 'Month is required for monthly limits' }, { status: 400 })
+    // 月次の場合は月または期間が必須
+    if (limitType === 'MONTHLY') {
+      const hasMonth = month !== null && month !== undefined
+      const hasPeriod = (startMonth !== null && startMonth !== undefined) && (endMonth !== null && endMonth !== undefined)
+
+      if (!hasMonth && !hasPeriod) {
+        return NextResponse.json({ error: 'Month or period (startMonth and endMonth) is required for monthly limits' }, { status: 400 })
+      }
+
+      // 期間の場合、開始月 <= 終了月をチェック
+      if (hasPeriod && parseInt(startMonth) > parseInt(endMonth)) {
+        return NextResponse.json({ error: 'Start month must be less than or equal to end month' }, { status: 400 })
+      }
     }
 
     // 金額のバリデーション
@@ -112,12 +122,14 @@ export async function POST(request: NextRequest) {
         limitType,
         year: parseInt(year),
         month: month ? parseInt(month) : null,
+        startMonth: startMonth ? parseInt(startMonth) : null,
+        endMonth: endMonth ? parseInt(endMonth) : null,
       },
     })
 
     if (existingLimit) {
-      return NextResponse.json({ 
-        error: 'この条件の限度額は既に設定されています。編集してください。' 
+      return NextResponse.json({
+        error: 'この条件の限度額は既に設定されています。編集してください。'
       }, { status: 400 })
     }
 
@@ -130,6 +142,8 @@ export async function POST(request: NextRequest) {
         limitAmount: amount,
         year: parseInt(year),
         month: month ? parseInt(month) : null,
+        startMonth: startMonth ? parseInt(startMonth) : null,
+        endMonth: endMonth ? parseInt(endMonth) : null,
       },
       include: {
         masterUser: {
