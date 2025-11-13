@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export const dynamic = 'force-dynamic'
+// カテゴリは頻繁に変更されないため、revalidateを設定
+export const revalidate = 60 // 60秒ごとに再検証
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,7 +40,15 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ success: true, categories })
+    // Cache-Controlヘッダーを追加
+    return NextResponse.json(
+      { success: true, categories },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+        },
+      }
+    )
   } catch (error) {
     console.error('Error fetching categories:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

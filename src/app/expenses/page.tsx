@@ -1,3 +1,4 @@
+// 経費ページは認証が必要なため完全に動的
 export const dynamic = 'force-dynamic'
 
 import { getServerSession } from 'next-auth'
@@ -19,16 +20,25 @@ export default async function ExpensesPage() {
   let categories: any[] = []
 
   try {
+    // N+1問題を解決：条件を事前に構築
+    let whereCondition: any
+
+    if (session.user.role === 'MASTER') {
+      // マスターアカウントの場合、自分と配下の子アカウントの経費を取得
+      whereCondition = {
+        OR: [
+          { userId: session.user.id },
+          { user: { masterUserId: session.user.id } }
+        ]
+      }
+    } else {
+      // 子アカウントの場合、自分の経費のみ
+      whereCondition = { userId: session.user.id }
+    }
+
     // 経費データを取得
     expenses = await prisma.expense.findMany({
-      where: {
-        userId: session.user.role === 'MASTER' && session.user.masterUserId
-          ? { in: await prisma.user.findMany({
-              where: { masterUserId: session.user.id },
-              select: { id: true }
-            }).then((users: any[]) => users.map((u: any) => u.id)) }
-          : session.user.id
-      },
+      where: whereCondition,
       include: {
         user: {
           select: {
