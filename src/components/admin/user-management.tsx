@@ -154,10 +154,31 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
     }
   }
 
-  const handleDeleteUser = (userId: string) => {
-    if (confirm('このユーザーを削除しますか？この操作は取り消せません。')) {
-      // TODO: ユーザー削除APIを呼び出し
-      console.log('ユーザー削除:', userId)
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('このユーザーを削除しますか？この操作は取り消せません。\n\n関連するすべてのデータ（経費、通知など）も削除されます。')) {
+      return
+    }
+
+    try {
+      setSubmitting(true)
+
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        alert('ユーザーを削除しました')
+        // ユーザー一覧を再取得
+        await fetchUsers()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'ユーザーの削除に失敗しました')
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      alert('エラーが発生しました')
+    } finally {
+      setSubmitting(false)
     }
   }
 

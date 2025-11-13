@@ -106,3 +106,90 @@ export async function PUT(
     )
   }
 }
+
+// ユーザーの削除
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    // 認証チェック
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // マスターアカウントのみ許可
+    if (session.user.role !== 'MASTER') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { id } = params
+
+    // 削除対象のユーザーを取得
+    const targetUser = await prisma.user.findUnique({
+      where: { id }
+    })
+
+    if (!targetUser) {
+      return NextResponse.json(
+        { error: 'ユーザーが見つかりません' },
+        { status: 404 }
+      )
+    }
+
+    // 自分自身は削除できない
+    if (targetUser.id === session.user.id) {
+      return NextResponse.json(
+        { error: '自分自身を削除することはできません' },
+        { status: 400 }
+      )
+    }
+
+    // 権限チェック: 自分の子アカウントのみ削除可能
+    if (targetUser.masterUserId !== session.user.id) {
+      return NextResponse.json(
+        { error: 'このユーザーを削除する権限がありません' },
+        { status: 403 }
+      )
+    }
+
+    // ユーザーに関連するデータを削除（カスケード削除）
+    // 1. 経費データの削除
+    await prisma.expense.deleteMany({
+      where: { userId: id }
+    })
+
+    // 2. 経費上限データの削除
+    await prisma.expenseLimit.deleteMany({
+      where: { targetUserId: id }
+    })
+
+    // 3. 上限解放申請の削除
+    await prisma.limitExemptionRequest.deleteMany({
+      where: { userId: id }
+    })
+
+    // 4. 通知の削除
+    await prisma.notification.deleteMany({
+      where: { userId: id }
+    })
+
+    // 5. ユーザーを削除
+    await prisma.user.delete({
+      where: { id }
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'ユーザーを削除しました'
+    })
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    return NextResponse.json(
+      { error: 'ユーザーの削除に失敗しました' },
+      { status: 500 }
+    )
+  }
+}
