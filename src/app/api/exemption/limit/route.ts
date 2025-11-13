@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
     const limitInfo = await getCurrentAvailableLimit(userId, year, month)
 
     // デバッグ用ログ
-    console.log(`[API /exemption/limit] userId=${userId}, year=${year}, month=${month}, limitInfo=`, limitInfo)
 
     // レスポンスをサニタイズ（負の値やNaNを防ぐ）
     const sanitizedInfo = {

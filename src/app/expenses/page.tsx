@@ -76,7 +76,6 @@ export default async function ExpensesPage() {
       })
     }
   } catch (error) {
-    console.log('データベース接続エラー、モックデータを使用します:', error)
     
     // モックデータ
     expenses = [

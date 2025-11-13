@@ -56,7 +56,6 @@ export async function PUT(request: NextRequest) {
     }
 
     // 現在は設定を受け取るだけ（将来的にはDBに保存）
-    console.log('Notification settings updated for user:', session.user.id, body)
 
     return NextResponse.json({
       message: '通知設定を保存しました',

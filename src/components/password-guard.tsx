@@ -16,14 +16,10 @@ export function PasswordGuard({ children }: PasswordGuardProps) {
     // セッションストレージからパスワードを確認
     const storedPassword = sessionStorage.getItem('access_password')
     
-    console.log('PasswordGuard: storedPassword =', storedPassword)
-    console.log('PasswordGuard: current path =', window.location.pathname)
     
     if (storedPassword === 'keihiseisan2024') {
-      console.log('PasswordGuard: Password correct, allowing access')
       setIsAuthenticated(true)
     } else {
-      console.log('PasswordGuard: Password incorrect, redirecting to password-check')
       // パスワードが正しくない場合は認証ページにリダイレクト
       if (window.location.pathname !== '/password-check') {
         window.location.href = '/password-check'

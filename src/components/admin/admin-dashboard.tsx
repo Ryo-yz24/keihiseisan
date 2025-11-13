@@ -1,19 +1,48 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { UserRole } from '@prisma/client'
 import { AdminHeader } from './admin-header'
 import { AdminSidebar } from './admin-sidebar'
-import { UserManagement } from './user-management'
-import { ExpenseLimits } from './expense-limits'
-import { CategoryManagement } from './category-management'
-import { AuditLogs } from './audit-logs'
-import { SystemSettings } from './system-settings'
-import { ExemptionManagement } from './exemption-management'
-import { ChildAccountManagement } from './child-account-management'
-import { ExpenseApproval } from './expense-approval'
-import { AnnualSummaryReport } from './annual-summary-report'
+
+// 大きなコンポーネントを動的インポート（パフォーマンス最適化）
+const UserManagement = dynamic(() => import('./user-management').then(mod => ({ default: mod.UserManagement })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
+
+const ExpenseLimits = dynamic(() => import('./expense-limits').then(mod => ({ default: mod.ExpenseLimits })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
+
+const CategoryManagement = dynamic(() => import('./category-management').then(mod => ({ default: mod.CategoryManagement })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
+
+const AuditLogs = dynamic(() => import('./audit-logs').then(mod => ({ default: mod.AuditLogs })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
+
+const SystemSettings = dynamic(() => import('./system-settings').then(mod => ({ default: mod.SystemSettings })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
+
+const ExemptionManagement = dynamic(() => import('./exemption-management').then(mod => ({ default: mod.ExemptionManagement })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
+
+const ChildAccountManagement = dynamic(() => import('./child-account-management').then(mod => ({ default: mod.ChildAccountManagement })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
+
+const ExpenseApproval = dynamic(() => import('./expense-approval').then(mod => ({ default: mod.ExpenseApproval })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
+
+const AnnualSummaryReport = dynamic(() => import('./annual-summary-report').then(mod => ({ default: mod.AnnualSummaryReport })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
 
 interface AdminDashboardProps {
   user: {

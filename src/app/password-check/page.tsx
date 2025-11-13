@@ -14,18 +14,13 @@ function PasswordCheckContent() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
-    console.log('Password submitted:', password)
-    
+
     if (password === 'keihiseisan2024') {
-      console.log('Password correct, saving to sessionStorage')
       // パスワードをセッションストレージに保存
       sessionStorage.setItem('access_password', password)
-      console.log('Redirecting to dashboard')
       // ダッシュボードにリダイレクト（window.locationを使用）
       window.location.href = '/dashboard'
     } else {
-      console.log('Password incorrect')
       setError('パスワードが正しくありません')
     }
   }

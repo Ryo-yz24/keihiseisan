@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { ExpenseStats } from '@/lib/expense-utils'
 import { DashboardHeader } from './dashboard-header'
@@ -9,10 +10,23 @@ import { ExpenseChart } from './expense-chart'
 import { PendingExpenses } from './pending-expenses'
 import { LimitUsageCard } from './limit-usage-card'
 import { ExemptionInfoCard } from './exemption-info-card'
-import { ExpenseManagement } from '@/components/expenses/expense-management'
-import { AnnualSummaryReport } from '@/components/admin/annual-summary-report'
-import { ExemptionRequestForm } from '@/components/forms/exemption-request-form'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+
+// 大きなコンポーネントを動的にインポート
+const ExpenseManagement = dynamic(() => import('@/components/expenses/expense-management').then(mod => ({ default: mod.ExpenseManagement })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>,
+  ssr: false
+})
+
+const AnnualSummaryReport = dynamic(() => import('@/components/admin/annual-summary-report').then(mod => ({ default: mod.AnnualSummaryReport })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>,
+  ssr: false
+})
+
+const ExemptionRequestForm = dynamic(() => import('@/components/forms/exemption-request-form').then(mod => ({ default: mod.ExemptionRequestForm })), {
+  loading: () => <div className="text-center py-4 text-gray-500">読み込み中...</div>,
+  ssr: false
+})
 
 interface DashboardContentProps {
   user: {
