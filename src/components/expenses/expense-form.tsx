@@ -338,19 +338,30 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
           </div>
 
           <div className="space-y-2">
-            <Label>領収書画像</Label>
-            
+            <Label>領収書画像・PDF</Label>
+
             {existingImages.length > 0 && (
               <div className="mb-4">
-                <div className="text-sm text-gray-600 mb-2">既存の画像</div>
+                <div className="text-sm text-gray-600 mb-2">既存のファイル</div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
                   {existingImages.map((image) => (
                     <div key={image.id} className="relative">
-                      <img
-                        src={image.filePath}
-                        alt={image.fileName}
-                        className="w-full h-32 object-cover rounded-md border"
-                      />
+                      {image.fileName?.toLowerCase().endsWith('.pdf') ? (
+                        <div className="w-full h-32 flex items-center justify-center bg-gray-100 rounded-md border">
+                          <div className="text-center">
+                            <svg className="mx-auto h-12 w-12 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                            </svg>
+                            <p className="text-xs text-gray-600 mt-1">PDF</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={image.filePath}
+                          alt={image.fileName}
+                          className="w-full h-32 object-cover rounded-md border"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => removeExistingImage(image.id)}
@@ -367,27 +378,38 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
             <div className="flex items-center space-x-2">
               <label className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
                 <Upload className="h-4 w-4" />
-                <span className="text-sm">画像を選択</span>
+                <span className="text-sm">ファイルを選択</span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   multiple
                   onChange={handleImageChange}
                   className="hidden"
                 />
               </label>
-              <span className="text-sm text-gray-500">{images.length}枚選択中</span>
+              <span className="text-sm text-gray-500">{images.length}件選択中</span>
             </div>
 
             {images.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 px-2">
                 {images.map((image, index) => (
                   <div key={index} className="relative">
-                    <img
-                      src={URL.createObjectURL(image)}
-                      alt={`領収書 ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-md border"
-                    />
+                    {image.type === 'application/pdf' ? (
+                      <div className="w-full h-32 flex items-center justify-center bg-gray-100 rounded-md border">
+                        <div className="text-center">
+                          <svg className="mx-auto h-12 w-12 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                          </svg>
+                          <p className="text-xs text-gray-600 mt-1 truncate px-2">{image.name}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <img
+                        src={URL.createObjectURL(image)}
+                        alt={`領収書 ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-md border"
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
