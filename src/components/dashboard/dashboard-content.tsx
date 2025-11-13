@@ -11,6 +11,8 @@ import { LimitUsageCard } from './limit-usage-card'
 import { ExemptionInfoCard } from './exemption-info-card'
 import { ExpenseManagement } from '@/components/expenses/expense-management'
 import { AnnualSummaryReport } from '@/components/admin/annual-summary-report'
+import { ExemptionRequestForm } from '@/components/forms/exemption-request-form'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface DashboardContentProps {
   user: {
@@ -26,6 +28,7 @@ interface DashboardContentProps {
 
 export function DashboardContent({ user, stats }: DashboardContentProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'reports'>('overview')
+  const [showExemptionDialog, setShowExemptionDialog] = useState(false)
 
   // URLハッシュによるスクロール処理
   useEffect(() => {
@@ -82,13 +85,14 @@ export function DashboardContent({ user, stats }: DashboardContentProps) {
                 <LimitUsageCard limitUsage={stats.limitUsage} />
               )}
               
-              {/* 上限解放情報カード */}
-              {stats.exemptionInfo && (
+              {/* 上限解放情報カード（子アカウントのみ） */}
+              {user.role === 'CHILD' && stats.exemptionInfo && (
                 <div id="exemption-info" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <ExemptionInfoCard
                     exemptionInfo={stats.exemptionInfo}
                     year={new Date().getFullYear()}
                     month={new Date().getMonth() + 1}
+                    onRequestExemption={() => setShowExemptionDialog(true)}
                   />
                 </div>
               )}
@@ -140,6 +144,24 @@ export function DashboardContent({ user, stats }: DashboardContentProps) {
           )}
         </div>
       </main>
+
+      {/* 上限解放申請ダイアログ */}
+      <Dialog open={showExemptionDialog} onOpenChange={setShowExemptionDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>上限解放申請</DialogTitle>
+          </DialogHeader>
+          <ExemptionRequestForm
+            userId={user.id}
+            year={new Date().getFullYear()}
+            month={new Date().getMonth() + 1}
+            onSuccess={() => {
+              setShowExemptionDialog(false)
+              window.location.reload()
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

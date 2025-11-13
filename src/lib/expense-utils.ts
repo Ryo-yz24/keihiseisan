@@ -20,6 +20,13 @@ export interface ExpenseStats {
     limit: number
     percentage: number
   }
+  exemptionInfo?: {
+    originalLimit: number
+    exemptionAmount: number
+    finalLimit: number
+    usedAmount: number
+    availableAmount: number
+  } | null
 }
 
 export async function getExpenseStats(
@@ -33,8 +40,8 @@ export async function getExpenseStats(
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
     // 基本クエリ条件
-    const whereCondition = userRole === 'MASTER' 
-      ? { 
+    const whereCondition = userRole === 'MASTER'
+      ? {
           OR: [
             { userId },
             { user: { masterUserId: userId } }
@@ -42,8 +49,9 @@ export async function getExpenseStats(
         }
       : { userId }
 
-    // 総額と月額の取得
-    const [totalAmount, monthlyAmount] = await Promise.all([
+    // パフォーマンス最適化: すべてのクエリを並列実行
+    const [totalAmount, monthlyAmount, statusCounts, categoryData] = await Promise.all([
+      // 総額の取得
       prisma.expense.aggregate({
         where: {
           ...whereCondition,
@@ -53,6 +61,7 @@ export async function getExpenseStats(
           amount: true
         }
       }),
+      // 月額の取得
       prisma.expense.aggregate({
         where: {
           ...whereCondition,
@@ -64,34 +73,32 @@ export async function getExpenseStats(
         _sum: {
           amount: true
         }
+      }),
+      // ステータス別件数
+      prisma.expense.groupBy({
+        by: ['status'],
+        where: whereCondition,
+        _count: {
+          id: true
+        }
+      }),
+      // カテゴリ別内訳
+      prisma.expense.groupBy({
+        by: ['category'],
+        where: {
+          ...whereCondition,
+          status: 'APPROVED'
+        },
+        _sum: {
+          amount: true
+        }
       })
     ])
-
-    // ステータス別件数
-    const statusCounts = await prisma.expense.groupBy({
-      by: ['status'],
-      where: whereCondition,
-      _count: {
-        id: true
-      }
-    })
 
     const statusMap = statusCounts.reduce((acc: any, item: any) => {
       acc[item.status] = item._count.id
       return acc
     }, {} as Record<string, number>)
-
-    // カテゴリ別内訳
-    const categoryData = await prisma.expense.groupBy({
-      by: ['category'],
-      where: {
-        ...whereCondition,
-        status: 'APPROVED'
-      },
-      _sum: {
-        amount: true
-      }
-    })
 
     const totalAmountValue = Number(totalAmount._sum.amount || 0)
     const categoryBreakdown = categoryData.map((item: any) => ({
@@ -100,35 +107,47 @@ export async function getExpenseStats(
       percentage: totalAmountValue > 0 ? (Number(item._sum.amount || 0) / totalAmountValue) * 100 : 0
     }))
 
-    // 月別トレンド（過去12ヶ月）
+    // 月別トレンド（過去12ヶ月） - 最適化: 1つのクエリで全データ取得
+    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+
+    const monthlyExpenses = await prisma.expense.findMany({
+      where: {
+        ...whereCondition,
+        status: 'APPROVED',
+        expenseDate: {
+          gte: twelveMonthsAgo
+        }
+      },
+      select: {
+        expenseDate: true,
+        amount: true
+      }
+    })
+
+    // 月ごとにグループ化して集計
     const monthlyTrend = []
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
       const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0)
 
-      const monthAmount = await prisma.expense.aggregate({
-        where: {
-          ...whereCondition,
-          status: 'APPROVED',
-          expenseDate: {
-            gte: monthStart,
-            lte: monthEnd
-          }
-        },
-        _sum: {
-          amount: true
-        }
-      })
+      const monthSum = monthlyExpenses
+        .filter(exp => {
+          const expDate = new Date(exp.expenseDate)
+          return expDate >= monthStart && expDate <= monthEnd
+        })
+        .reduce((sum, exp) => sum + Number(exp.amount), 0)
 
       monthlyTrend.push({
         month: date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'short' }),
-        amount: Number(monthAmount._sum.amount || 0)
+        amount: monthSum
       })
     }
 
-    // 限度額使用状況
+    // 限度額使用状況と上限解放情報を並列取得
     let limitUsage
+    let exemptionInfo = null
+
     if (userRole === 'MASTER') {
       const currentLimit = await prisma.expenseLimit.findFirst({
         where: {
@@ -147,6 +166,50 @@ export async function getExpenseStats(
           percentage: (monthlyAmountValue / Number(currentLimit.limitAmount)) * 100
         }
       }
+    } else {
+      // 子アカウントの場合、上限解放情報を並列取得
+      const [limit, exemption] = await Promise.all([
+        // 特定ユーザー向けの上限 → 全体設定の順で検索
+        prisma.expenseLimit.findFirst({
+          where: {
+            masterUserId: masterUserId || undefined,
+            limitType: 'MONTHLY',
+            year: now.getFullYear(),
+            month: now.getMonth() + 1,
+            OR: [
+              { targetUserId: userId }, // 特定ユーザー向け
+              { targetUserId: null }     // 全体設定
+            ]
+          },
+          orderBy: [
+            { targetUserId: 'desc' } // nullでない（特定ユーザー向け）を優先
+          ]
+        }),
+        prisma.limitExemptionRequest.findFirst({
+          where: {
+            userId,
+            year: now.getFullYear(),
+            month: now.getMonth() + 1,
+            status: 'APPROVED'
+          }
+        })
+      ])
+
+      if (limit) {
+        const originalLimit = Number(limit.limitAmount)
+        const exemptionAmount = exemption ? Number(exemption.requestedAmount) : 0
+        const finalLimit = originalLimit + exemptionAmount
+        const usedAmount = Number(monthlyAmount._sum.amount || 0)
+        const availableAmount = Math.max(0, finalLimit - usedAmount)
+
+        exemptionInfo = {
+          originalLimit,
+          exemptionAmount,
+          finalLimit,
+          usedAmount,
+          availableAmount
+        }
+      }
     }
 
     return {
@@ -157,7 +220,8 @@ export async function getExpenseStats(
       rejectedCount: statusMap.REJECTED || 0,
       categoryBreakdown,
       monthlyTrend,
-      limitUsage
+      limitUsage,
+      exemptionInfo
     }
   } catch (error) {
     // データベース接続エラーの場合はモックデータを返す
