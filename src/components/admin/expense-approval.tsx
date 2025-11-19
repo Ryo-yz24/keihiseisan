@@ -56,7 +56,7 @@ export function ExpenseApproval({ masterUserId }: ExpenseApprovalProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string>('PENDING')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
