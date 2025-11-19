@@ -29,7 +29,7 @@ export async function PUT(
     const { name, isActive, displayOrder } = body
     const categoryId = params.id
 
-    // カテゴリの存在確認と権限チェック
+    // カテゴリの存在確認
     const category = await prisma.category.findUnique({
       where: { id: categoryId }
     })
@@ -38,13 +38,6 @@ export async function PUT(
       return NextResponse.json(
         { error: 'カテゴリが見つかりません' },
         { status: 404 }
-      )
-    }
-
-    if (category.masterUserId !== session.user.id) {
-      return NextResponse.json(
-        { error: '権限がありません' },
-        { status: 403 }
       )
     }
 
@@ -102,7 +95,7 @@ export async function DELETE(
 
     const categoryId = params.id
 
-    // カテゴリの存在確認と権限チェック
+    // カテゴリの存在確認
     const category = await prisma.category.findUnique({
       where: { id: categoryId }
     })
@@ -111,13 +104,6 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'カテゴリが見つかりません' },
         { status: 404 }
-      )
-    }
-
-    if (category.masterUserId !== session.user.id) {
-      return NextResponse.json(
-        { error: '権限がありません' },
-        { status: 403 }
       )
     }
 

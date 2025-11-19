@@ -81,7 +81,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       case 'limits':
         return <ExpenseLimits masterUserId={user.id} />
       case 'categories':
-        return <CategoryManagement masterUserId={user.id} />
+        return <CategoryManagement />
       case 'exemption':
         return <ExemptionManagement masterUserId={user.id} />
       case 'expense-approval':

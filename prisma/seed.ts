@@ -52,10 +52,9 @@ async function main() {
   ];
 
   for (const category of defaultCategories) {
-    // 既存のカテゴリをチェック
+    // 既存のカテゴリをチェック（グローバルカテゴリシステム）
     const existingCategory = await prisma.category.findFirst({
       where: {
-        masterUserId: masterUser.id,
         name: category.name,
       },
     });
@@ -63,7 +62,6 @@ async function main() {
     if (!existingCategory) {
       const createdCategory = await prisma.category.create({
         data: {
-          masterUserId: masterUser.id,
           name: category.name,
           displayOrder: category.displayOrder,
           isActive: true,

@@ -20,11 +20,7 @@ interface Category {
   expenseCount?: number
 }
 
-interface CategoryManagementProps {
-  masterUserId: string
-}
-
-export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
+export function CategoryManagement() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -36,7 +32,7 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
 
   useEffect(() => {
     fetchCategories()
-  }, [masterUserId])
+  }, [])
 
   const fetchCategories = async () => {
     try {

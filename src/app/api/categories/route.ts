@@ -13,26 +13,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    let masterUserId = session.user.id
-
-    // 子アカウントの場合、マスターユーザーIDを取得
-    if (session.user.role === 'CHILD') {
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { masterUserId: true },
-      })
-
-      if (user && user.masterUserId) {
-        masterUserId = user.masterUserId
-      }
-    }
-
     // 管理画面用：すべてのカテゴリを取得（無効も含む）
     const includeInactive = request.nextUrl.searchParams.get('includeInactive') === 'true'
 
+    // グローバルカテゴリシステム：すべてのユーザーが全カテゴリを取得可能
     const categories = await prisma.category.findMany({
       where: {
-        masterUserId,
         ...(includeInactive ? {} : { isActive: true }),
       },
       orderBy: {
@@ -80,9 +66,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 最大の表示順序を取得
+    // グローバルカテゴリシステム：すべてのカテゴリから最大の表示順序を取得
     const maxOrderCategory = await prisma.category.findFirst({
-      where: { masterUserId: session.user.id },
       orderBy: { displayOrder: 'desc' },
       select: { displayOrder: true }
     })
@@ -92,7 +77,6 @@ export async function POST(request: NextRequest) {
     // カテゴリを作成
     const category = await prisma.category.create({
       data: {
-        masterUserId: session.user.id,
         name: name.trim(),
         displayOrder: nextOrder,
         isActive: true,

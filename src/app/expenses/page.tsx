@@ -59,22 +59,15 @@ export default async function ExpensesPage() {
       }
     })
 
-    // カテゴリデータを取得
-    const masterUserId = session.user.role === 'MASTER' 
-      ? session.user.id 
-      : session.user.masterUserId
-
-    if (masterUserId) {
-      categories = await prisma.category.findMany({
-        where: {
-          masterUserId: masterUserId,
-          isActive: true
-        },
-        orderBy: {
-          displayOrder: 'asc'
-        }
-      })
-    }
+    // カテゴリデータを取得（グローバルカテゴリシステム）
+    categories = await prisma.category.findMany({
+      where: {
+        isActive: true
+      },
+      orderBy: {
+        displayOrder: 'asc'
+      }
+    })
   } catch (error) {
     
     // モックデータ

@@ -50,7 +50,6 @@ model User {
   accounts           Account[]
   sessions           Session[]
   auditLogs          AuditLog[]
-  categories         Category[]
   expenseLimits      ExpenseLimit[]
   approvedExpenses   Expense[]               @relation("ApprovedExpenses")
   expenses           Expense[]
@@ -129,12 +128,10 @@ model ExpenseLimit {
 
 model Category {
   id           String   @id @default(cuid())
-  masterUserId String
   name         String
   displayOrder Int
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
-  masterUser   User     @relation(fields: [masterUserId], references: [id])
 
   @@map("categories")
 }

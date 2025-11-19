@@ -28,7 +28,7 @@ export async function PUT(
     const { direction } = body  // 'up' or 'down'
     const categoryId = params.id
 
-    // カテゴリの存在確認と権限チェック
+    // カテゴリの存在確認
     const category = await prisma.category.findUnique({
       where: { id: categoryId }
     })
@@ -40,17 +40,9 @@ export async function PUT(
       )
     }
 
-    if (category.masterUserId !== session.user.id) {
-      return NextResponse.json(
-        { error: '権限がありません' },
-        { status: 403 }
-      )
-    }
-
-    // 交換対象のカテゴリを探す
+    // 交換対象のカテゴリを探す（グローバルカテゴリシステム）
     const targetCategory = await prisma.category.findFirst({
       where: {
-        masterUserId: session.user.id,
         displayOrder: direction === 'up' ? {
           lt: category.displayOrder
         } : {
