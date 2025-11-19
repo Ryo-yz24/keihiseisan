@@ -42,6 +42,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // 承認済み、申請中、修正依頼中の経費を却下可能（下書きと既に却下済みは不可）
+    if (expense.status === 'DRAFT' || expense.status === 'REJECTED') {
+      return NextResponse.json({
+        error: expense.status === 'DRAFT' ? '下書きの経費は却下できません' : 'すでに却下されています'
+      }, { status: 400 })
+    }
+
     const updatedExpense = await prisma.expense.update({
       where: { id },
       data: {

@@ -418,6 +418,30 @@ export function ExpenseApproval({ masterUserId }: ExpenseApprovalProps) {
                   </div>
                 </div>
               )}
+
+              {selectedExpense.status === 'APPROVED' && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+                    <p className="text-sm text-yellow-800">
+                      ⚠️ この経費は承認済みです。却下すると承認が取り消されます。
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      const reason = prompt('承認を取り消して却下する理由を入力してください:')
+                      if (reason) {
+                        setRejectReason(reason)
+                        handleReject(selectedExpense.id)
+                      }
+                    }}
+                    variant="outline"
+                    className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    承認を取り消して却下する
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
