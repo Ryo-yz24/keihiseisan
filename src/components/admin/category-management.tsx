@@ -41,7 +41,8 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
   const fetchCategories = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/categories?includeInactive=true')
+      // キャッシュを回避するためにタイムスタンプを追加
+      const response = await fetch(`/api/categories?includeInactive=true&_t=${Date.now()}`)
       if (response.ok) {
         const data = await response.json()
         setCategories(data.categories || [])
@@ -179,6 +180,16 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
 
   const handleMoveUp = async (categoryId: string) => {
     try {
+      // 楽観的UIアップデート
+      const index = categories.findIndex(c => c.id === categoryId)
+      if (index > 0) {
+        const newCategories = [...categories]
+        const temp = newCategories[index - 1]
+        newCategories[index - 1] = newCategories[index]
+        newCategories[index] = temp
+        setCategories(newCategories)
+      }
+
       const response = await fetch(`/api/categories/${categoryId}/reorder`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -186,19 +197,34 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
       })
 
       if (response.ok) {
+        // サーバーから最新データを取得
         await fetchCategories()
       } else {
         const data = await response.json()
         alert(data.error || '移動に失敗しました')
+        // エラー時は元に戻す
+        await fetchCategories()
       }
     } catch (error) {
       console.error('Error moving up:', error)
       alert('エラーが発生しました')
+      // エラー時は元に戻す
+      await fetchCategories()
     }
   }
 
   const handleMoveDown = async (categoryId: string) => {
     try {
+      // 楽観的UIアップデート
+      const index = categories.findIndex(c => c.id === categoryId)
+      if (index < categories.length - 1) {
+        const newCategories = [...categories]
+        const temp = newCategories[index + 1]
+        newCategories[index + 1] = newCategories[index]
+        newCategories[index] = temp
+        setCategories(newCategories)
+      }
+
       const response = await fetch(`/api/categories/${categoryId}/reorder`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -206,14 +232,19 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
       })
 
       if (response.ok) {
+        // サーバーから最新データを取得
         await fetchCategories()
       } else {
         const data = await response.json()
         alert(data.error || '移動に失敗しました')
+        // エラー時は元に戻す
+        await fetchCategories()
       }
     } catch (error) {
       console.error('Error moving down:', error)
       alert('エラーが発生しました')
+      // エラー時は元に戻す
+      await fetchCategories()
     }
   }
 
