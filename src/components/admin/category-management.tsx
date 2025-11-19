@@ -31,6 +31,8 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [highlightedCategoryId, setHighlightedCategoryId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCategories()
@@ -88,9 +90,16 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
         })
 
         if (response.ok) {
+          const data = await response.json()
           await fetchCategories()
           setEditingCategory(null)
           setNewCategoryName('')
+          setHighlightedCategoryId(data.category?.id || null)
+          setSuccessMessage(`カテゴリ「${newCategoryName}」を更新しました`)
+          setTimeout(() => {
+            setSuccessMessage(null)
+            setHighlightedCategoryId(null)
+          }, 3000)
         } else {
           const data = await response.json()
           alert(data.error || 'カテゴリの更新に失敗しました')
@@ -104,9 +113,16 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
         })
 
         if (response.ok) {
-          await fetchCategories()
+          const data = await response.json()
           setShowCreateModal(false)
           setNewCategoryName('')
+          await fetchCategories()
+          setHighlightedCategoryId(data.category?.id || null)
+          setSuccessMessage(`カテゴリ「${newCategoryName}」を追加しました`)
+          setTimeout(() => {
+            setSuccessMessage(null)
+            setHighlightedCategoryId(null)
+          }, 3000)
         } else {
           const data = await response.json()
           alert(data.error || 'カテゴリの作成に失敗しました')
@@ -219,6 +235,16 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
 
   return (
     <div className="space-y-6">
+      {/* 成功メッセージ */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4">
+          <div className="flex">
+            <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+            <p className="text-sm text-green-800">{successMessage}</p>
+          </div>
+        </div>
+      )}
+
       {/* ヘッダー */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -256,7 +282,14 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
           ) : (
             <div className="space-y-2">
               {categories.map((category, index) => (
-                <div key={category.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div
+                  key={category.id}
+                  className={`border rounded-lg p-4 hover:shadow-md transition-all ${
+                    highlightedCategoryId === category.id
+                      ? 'border-green-500 bg-green-50 shadow-lg'
+                      : 'border-gray-200'
+                  }`}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       {/* ドラッグハンドル */}
