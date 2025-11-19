@@ -201,7 +201,8 @@ export async function getAllExemptionRequests(
   status?: ExemptionRequestStatus
 ): Promise<ExemptionRequest[]> {
   try {
-    const where: any = {
+    // ORとstatusフィルターを正しく組み合わせる
+    const userCondition = {
       OR: [
         // 配下ユーザーの申請
         {
@@ -216,7 +217,14 @@ export async function getAllExemptionRequests(
       ]
     }
 
-    if (status) where.status = status
+    const where: any = status
+      ? {
+          AND: [
+            userCondition,
+            { status: status }
+          ]
+        }
+      : userCondition
 
     const requests = await prisma.limitExemptionRequest.findMany({
       where,

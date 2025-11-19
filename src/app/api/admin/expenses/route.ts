@@ -16,7 +16,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
 
-    const where: any = {
+    // ORとstatusフィルターを正しく組み合わせる
+    const userCondition = {
       OR: [
         // 配下ユーザーの経費
         {
@@ -31,9 +32,14 @@ export async function GET(request: NextRequest) {
       ],
     }
 
-    if (status && status !== 'all') {
-      where.status = status
-    }
+    const where: any = status && status !== 'all'
+      ? {
+          AND: [
+            userCondition,
+            { status: status }
+          ]
+        }
+      : userCondition
 
     const expenses = await prisma.expense.findMany({
       where,
