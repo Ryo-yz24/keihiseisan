@@ -17,7 +17,8 @@ import {
   RefreshCw,
   Image as ImageIcon,
   User,
-  Home
+  Home,
+  Trash2
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -59,6 +60,8 @@ export function ExpenseApproval({ masterUserId }: ExpenseApprovalProps) {
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     fetchExpenses()
@@ -134,6 +137,35 @@ export function ExpenseApproval({ masterUserId }: ExpenseApprovalProps) {
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!selectedExpense) return
+
+    try {
+      setDeleting(true)
+      setError(null)
+
+      const response = await fetch(`/api/expenses/${selectedExpense.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || '削除に失敗しました')
+      }
+
+      setSuccess('経費を削除しました')
+      setDeleteDialogOpen(false)
+      setIsDetailOpen(false)
+      setSelectedExpense(null)
+      await fetchExpenses()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -442,8 +474,62 @@ export function ExpenseApproval({ masterUserId }: ExpenseApprovalProps) {
                   </Button>
                 </div>
               )}
+
+              {selectedExpense.status === 'REJECTED' && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4 mb-4">
+                    <p className="text-sm text-gray-700">
+                      この経費は却下されています。削除すると完全に削除されます。
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setDeleteDialogOpen(true)}
+                    variant="outline"
+                    className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    削除する
+                  </Button>
+                </div>
+              )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 削除確認ダイアログ */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>経費の削除</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              この経費を完全に削除してもよろしいですか？この操作は取り消せません。
+            </p>
+            {selectedExpense && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                <p className="text-sm font-medium">{selectedExpense.vendor}</p>
+                <p className="text-sm text-gray-600">{formatCurrency(selectedExpense.amount)}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+            >
+              キャンセル
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? '削除中...' : '削除する'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

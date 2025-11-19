@@ -245,7 +245,7 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
               <Label>カテゴリ <span className="text-red-500">*</span></Label>
               <span className="text-xs text-gray-500">({categories.length}件)</span>
             </div>
-            <Select value={form.watch('category')} onValueChange={(value) => form.setValue('category', value)}>
+            <Select value={form.watch('category') || undefined} onValueChange={(value) => form.setValue('category', value)}>
               <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
