@@ -264,13 +264,6 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
                         <GripVertical className="h-4 w-4 text-gray-400" />
                       </div>
 
-                      {/* 表示順序 */}
-                      <div className="flex-shrink-0">
-                        <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
-                          {category.displayOrder}
-                        </span>
-                      </div>
-
                       {/* カテゴリ情報 */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
