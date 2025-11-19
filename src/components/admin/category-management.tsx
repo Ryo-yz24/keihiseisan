@@ -291,24 +291,25 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
 
                     <div className="flex items-center space-x-2">
                       {/* 移動ボタン */}
-                      <div className="flex flex-col space-y-1">
+                      <div className="flex items-center space-x-1 border border-gray-200 rounded-md">
                         <button
                           onClick={() => handleMoveUp(category.id)}
                           disabled={index === 0}
-                          className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-l-md"
                           title="上に移動"
                         >
-                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                           </svg>
                         </button>
+                        <div className="h-6 w-px bg-gray-200"></div>
                         <button
                           onClick={() => handleMoveDown(category.id)}
                           disabled={index === categories.length - 1}
-                          className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-r-md"
                           title="下に移動"
                         >
-                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </button>
