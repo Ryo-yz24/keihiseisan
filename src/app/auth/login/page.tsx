@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 import { useState } from 'react'
-import { signIn, getSession } from 'next-auth/react'
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -46,12 +46,9 @@ export default function LoginPage() {
       if (result?.error) {
         setError('メールアドレスまたはパスワードが正しくありません')
       } else {
-        const session = await getSession()
-        if (session?.user.role === 'MASTER') {
-          router.push('/dashboard')
-        } else {
-          router.push('/dashboard')
-        }
+        // 不要なgetSession()を削除し、直接ダッシュボードへ遷移
+        router.push('/dashboard')
+        router.refresh() // サーバーコンポーネントを再レンダリング
       }
     } catch (error) {
       setError('ログインに失敗しました。しばらくしてから再度お試しください。')

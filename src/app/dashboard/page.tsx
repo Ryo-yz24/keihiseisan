@@ -1,3 +1,4 @@
+// ダッシュボードは認証が必要なため完全に動的
 export const dynamic = 'force-dynamic'
 
 import { getServerSession } from 'next-auth'

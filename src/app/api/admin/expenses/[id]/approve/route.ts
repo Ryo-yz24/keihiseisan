@@ -29,7 +29,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
     }
 
-    if (expense.user.masterUserId !== session.user.id) {
+    // マスターユーザーが自分自身の経費を承認する場合、または配下ユーザーの経費を承認する場合を許可
+    const isSelfApproval = expense.userId === session.user.id
+    const isChildUserExpense = expense.user.masterUserId === session.user.id
+
+    if (!isSelfApproval && !isChildUserExpense) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

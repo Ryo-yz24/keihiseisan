@@ -17,9 +17,18 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
 
     const where: any = {
-      user: {
-        masterUserId: session.user.id,
-      },
+      OR: [
+        // 配下ユーザーの経費
+        {
+          user: {
+            masterUserId: session.user.id,
+          },
+        },
+        // マスターユーザー自身の経費
+        {
+          userId: session.user.id,
+        },
+      ],
     }
 
     if (status && status !== 'all') {

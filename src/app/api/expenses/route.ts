@@ -24,10 +24,21 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
 
+    // パフォーマンス最適化: 画像データは必要な時だけ取得
+    // 画像のパスのみ取得し、実際の画像は遅延読み込み
     const expenses = await prisma.expense.findMany({
       where,
       orderBy: { expenseDate: 'desc' },
-      include: { images: true },
+      include: {
+        images: {
+          select: {
+            id: true,
+            filePath: true,
+            fileName: true,
+            // fileSize と mimeType は省略してデータ量を削減
+          }
+        }
+      },
     })
 
     return NextResponse.json({ success: true, expenses })
@@ -123,9 +134,10 @@ export async function POST(request: NextRequest) {
         // ユーザー情報とマスターユーザー情報を取得
         const user = await prisma.user.findUnique({
           where: { id: session.user.id },
-          select: { name: true, email: true, masterUserId: true }
+          select: { name: true, email: true, masterUserId: true, role: true }
         })
 
+        // マスターユーザー以外の場合のみメール通知
         if (user?.masterUserId) {
           const masterUser = await prisma.user.findUnique({
             where: { id: user.masterUserId },

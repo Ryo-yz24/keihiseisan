@@ -14,30 +14,40 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const notifications = await prisma.notification.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 50, // 最新50件
-      include: {
-        relatedExpense: {
-          select: {
-            id: true,
-            amount: true,
-            vendor: true,
-            category: true,
+    // 並列でクエリ実行 - パフォーマンス最適化
+    const [notifications, unreadCount] = await Promise.all([
+      prisma.notification.findMany({
+        where: {
+          userId: session.user.id,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 50, // 最新50件
+        include: {
+          relatedExpense: {
+            select: {
+              id: true,
+              amount: true,
+              vendor: true,
+              category: true,
+            },
           },
         },
-      },
-    })
+      }),
+      // 未読カウントをDB側で実行
+      prisma.notification.count({
+        where: {
+          userId: session.user.id,
+          isRead: false,
+        },
+      }),
+    ])
 
     return NextResponse.json({
       success: true,
       notifications,
-      unreadCount: notifications.filter(n => !n.isRead).length,
+      unreadCount,
     })
   } catch (error) {
     console.error('Error fetching notifications:', error)

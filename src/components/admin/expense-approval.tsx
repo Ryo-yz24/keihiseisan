@@ -396,7 +396,7 @@ export function ExpenseApproval({ masterUserId }: ExpenseApprovalProps) {
                   <div className="flex space-x-3">
                     <Button
                       onClick={() => handleApprove(selectedExpense.id)}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       承認する

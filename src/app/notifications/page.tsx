@@ -137,20 +137,22 @@ export default function NotificationsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center">
-            <Bell className="mr-3 h-8 w-8" />
-            通知設定
-          </h1>
-          <p className="text-gray-600 mt-2">通知の受信設定を管理します</p>
+      <div className="mb-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold flex items-center">
+              <Bell className="mr-3 h-8 w-8" />
+              通知設定
+            </h1>
+            <p className="text-gray-600 mt-2">通知の受信設定を管理します</p>
+          </div>
+          <Link href="/dashboard" className="flex-shrink-0 ml-4">
+            <Button variant="outline" className="flex items-center">
+              <Home className="h-4 w-4 mr-2" />
+              ホームに戻る
+            </Button>
+          </Link>
         </div>
-        <Link href="/dashboard">
-          <Button variant="outline" className="flex items-center">
-            <Home className="h-4 w-4 mr-2" />
-            ホームに戻る
-          </Button>
-        </Link>
       </div>
 
       <Card>

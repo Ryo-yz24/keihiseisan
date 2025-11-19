@@ -1,9 +1,6 @@
-'use client'
-
-import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, TrendingUp, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { Calendar, TrendingUp, CheckCircle, Clock } from 'lucide-react'
 
 interface ExemptionInfo {
   originalLimit: number
@@ -14,44 +11,18 @@ interface ExemptionInfo {
 }
 
 interface ExemptionInfoCardProps {
-  userId: string
+  exemptionInfo: ExemptionInfo | null | undefined
   year: number
   month: number
   onRequestExemption?: () => void
 }
 
-export function ExemptionInfoCard({ 
-  userId, 
-  year, 
-  month, 
-  onRequestExemption 
+export function ExemptionInfoCard({
+  exemptionInfo,
+  year,
+  month,
+  onRequestExemption
 }: ExemptionInfoCardProps) {
-  const [exemptionInfo, setExemptionInfo] = useState<ExemptionInfo | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchExemptionInfo = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`/api/exemption/limit?userId=${userId}&year=${year}&month=${month}`)
-        
-        if (!response.ok) {
-          throw new Error('上限解放情報の取得に失敗しました')
-        }
-
-        const data = await response.json()
-        setExemptionInfo(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'エラーが発生しました')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchExemptionInfo()
-  }, [userId, year, month])
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ja-JP', {
       style: 'currency',
@@ -78,34 +49,6 @@ export function ExemptionInfoCard({
       '7月', '8月', '9月', '10月', '11月', '12月'
     ]
     return months[month - 1] || `${month}月`
-  }
-
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">上限解放情報</CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm text-muted-foreground">読み込み中...</div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">上限解放情報</CardTitle>
-          <AlertCircle className="h-4 w-4 text-red-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm text-red-600">{error}</div>
-        </CardContent>
-      </Card>
-    )
   }
 
   if (!exemptionInfo) {
@@ -242,4 +185,3 @@ export function ExemptionInfoCard({
     </Card>
   )
 }
-

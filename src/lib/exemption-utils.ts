@@ -202,11 +202,20 @@ export async function getAllExemptionRequests(
 ): Promise<ExemptionRequest[]> {
   try {
     const where: any = {
-      user: {
-        masterUserId: masterUserId
-      }
+      OR: [
+        // 配下ユーザーの申請
+        {
+          user: {
+            masterUserId: masterUserId
+          }
+        },
+        // マスターユーザー自身の申請
+        {
+          userId: masterUserId
+        }
+      ]
     }
-    
+
     if (status) where.status = status
 
     const requests = await prisma.limitExemptionRequest.findMany({
