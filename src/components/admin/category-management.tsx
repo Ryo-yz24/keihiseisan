@@ -182,33 +182,31 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
     try {
       // 楽観的UIアップデート
       const index = categories.findIndex(c => c.id === categoryId)
-      if (index > 0) {
-        const newCategories = [...categories]
-        const temp = newCategories[index - 1]
-        newCategories[index - 1] = newCategories[index]
-        newCategories[index] = temp
-        setCategories(newCategories)
-      }
+      if (index <= 0) return
 
+      const newCategories = [...categories]
+      const temp = newCategories[index - 1]
+      newCategories[index - 1] = newCategories[index]
+      newCategories[index] = temp
+      setCategories(newCategories)
+
+      // バックグラウンドでサーバーに保存
       const response = await fetch(`/api/categories/${categoryId}/reorder`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ direction: 'up' })
       })
 
-      if (response.ok) {
-        // サーバーから最新データを取得
-        await fetchCategories()
-      } else {
+      if (!response.ok) {
         const data = await response.json()
         alert(data.error || '移動に失敗しました')
-        // エラー時は元に戻す
+        // エラー時のみ元に戻す
         await fetchCategories()
       }
     } catch (error) {
       console.error('Error moving up:', error)
       alert('エラーが発生しました')
-      // エラー時は元に戻す
+      // エラー時のみ元に戻す
       await fetchCategories()
     }
   }
@@ -217,33 +215,31 @@ export function CategoryManagement({ masterUserId }: CategoryManagementProps) {
     try {
       // 楽観的UIアップデート
       const index = categories.findIndex(c => c.id === categoryId)
-      if (index < categories.length - 1) {
-        const newCategories = [...categories]
-        const temp = newCategories[index + 1]
-        newCategories[index + 1] = newCategories[index]
-        newCategories[index] = temp
-        setCategories(newCategories)
-      }
+      if (index < 0 || index >= categories.length - 1) return
 
+      const newCategories = [...categories]
+      const temp = newCategories[index + 1]
+      newCategories[index + 1] = newCategories[index]
+      newCategories[index] = temp
+      setCategories(newCategories)
+
+      // バックグラウンドでサーバーに保存
       const response = await fetch(`/api/categories/${categoryId}/reorder`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ direction: 'down' })
       })
 
-      if (response.ok) {
-        // サーバーから最新データを取得
-        await fetchCategories()
-      } else {
+      if (!response.ok) {
         const data = await response.json()
         alert(data.error || '移動に失敗しました')
-        // エラー時は元に戻す
+        // エラー時のみ元に戻す
         await fetchCategories()
       }
     } catch (error) {
       console.error('Error moving down:', error)
       alert('エラーが発生しました')
-      // エラー時は元に戻す
+      // エラー時のみ元に戻す
       await fetchCategories()
     }
   }
