@@ -81,7 +81,8 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories')
+      // キャッシュを回避するためにタイムスタンプを追加
+      const response = await fetch(`/api/categories?_t=${Date.now()}`)
       if (!response.ok) throw new Error('カテゴリの取得に失敗しました')
       const data = await response.json()
       setCategories(data.categories || [])
