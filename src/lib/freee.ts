@@ -71,7 +71,6 @@ export function getAuthorizationUrl(state: string): string {
     redirect_uri: FREEE_CONFIG.redirectUri,
     response_type: 'code',
     state,
-    scope: 'openid email profile deals.read deals.write walletables.read partners.read',
   })
 
   return `${FREEE_CONFIG.authUrl}?${params.toString()}`
