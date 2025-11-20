@@ -3,8 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// カテゴリは頻繁に変更されないため、revalidateを設定
-export const revalidate = 60 // 60秒ごとに再検証
+// カテゴリAPIは動的にキャッシュを制御
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,12 +35,14 @@ export async function GET(request: NextRequest) {
 
     console.log('[Categories API] Found categories:', categories.length)
 
-    // Cache-Controlヘッダーを追加
+    // キャッシュを無効化してWindows環境でも確実に最新データを取得
     return NextResponse.json(
       { success: true, categories },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       }
     )
