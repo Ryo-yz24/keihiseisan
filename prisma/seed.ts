@@ -9,6 +9,21 @@ const prisma = new PrismaClient({
 async function main() {
   // パスワードをハッシュ化
   const hashedPassword = await bcrypt.hash('password123', 10);
+  const infoAftwPassword = await bcrypt.hash('U8y5gu6N', 10);
+
+  // MASTERユーザーを作成（info.aftw@gmail.com）
+  const infoAftwUser = await prisma.user.upsert({
+    where: { email: 'info.aftw@gmail.com' },
+    update: {},
+    create: {
+      email: 'info.aftw@gmail.com',
+      name: 'Admin User',
+      password: infoAftwPassword,
+      role: 'MASTER',
+    },
+  });
+
+  console.log('✅ Main admin user created:', infoAftwUser.email);
 
   // MASTERユーザーを作成
   const masterUser = await prisma.user.upsert({
