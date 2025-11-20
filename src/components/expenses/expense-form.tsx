@@ -33,6 +33,7 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [categoryError, setCategoryError] = useState<string | null>(null)
 
   const isEditMode = !!expense
 
@@ -81,13 +82,22 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
 
   const fetchCategories = async () => {
     try {
+      setCategoryError(null)
       // キャッシュを回避するためにタイムスタンプを追加
       const response = await fetch(`/api/categories?_t=${Date.now()}`)
-      if (!response.ok) throw new Error('カテゴリの取得に失敗しました')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `カテゴリの取得に失敗しました (${response.status})`)
+      }
       const data = await response.json()
+      if (!data.categories || data.categories.length === 0) {
+        setCategoryError('カテゴリが登録されていません。管理者に連絡してください。')
+      }
       setCategories(data.categories || [])
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'カテゴリの取得に失敗しました'
       console.error('Error fetching categories:', err)
+      setCategoryError(errorMessage)
     }
   }
 
@@ -246,14 +256,27 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
               <Label>カテゴリ <span className="text-red-500">*</span></Label>
               <span className="text-xs text-gray-500">({categories.length}件)</span>
             </div>
-            <Select value={form.watch('category') || undefined} onValueChange={(value) => form.setValue('category', value)}>
-              <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {categoryError ? (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-600">{categoryError}</p>
+                <button
+                  type="button"
+                  onClick={fetchCategories}
+                  className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
+                >
+                  再試行
+                </button>
+              </div>
+            ) : (
+              <Select value={form.watch('category') || undefined} onValueChange={(value) => form.setValue('category', value)}>
+                <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {form.formState.errors.category && (
               <p className="text-sm text-red-600">{String(form.formState.errors.category.message)}</p>
             )}

@@ -10,11 +10,18 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
+      console.error('[Categories API] Unauthorized access attempt')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // 管理画面用：すべてのカテゴリを取得（無効も含む）
     const includeInactive = request.nextUrl.searchParams.get('includeInactive') === 'true'
+
+    console.log('[Categories API] Fetching categories for user:', {
+      userId: session.user.id,
+      userRole: session.user.role,
+      includeInactive
+    })
 
     // グローバルカテゴリシステム：すべてのユーザーが全カテゴリを取得可能
     const categories = await prisma.category.findMany({
@@ -26,6 +33,8 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    console.log('[Categories API] Found categories:', categories.length)
+
     // Cache-Controlヘッダーを追加
     return NextResponse.json(
       { success: true, categories },
@@ -36,7 +45,7 @@ export async function GET(request: NextRequest) {
       }
     )
   } catch (error) {
-    console.error('Error fetching categories:', error)
+    console.error('[Categories API] Error fetching categories:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
