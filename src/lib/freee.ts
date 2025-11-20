@@ -67,10 +67,11 @@ export function decryptToken(encryptedToken: string): string {
 // OAuth認証URLを生成
 export function getAuthorizationUrl(state: string): string {
   const params = new URLSearchParams({
+    response_type: 'code',
     client_id: FREEE_CONFIG.clientId,
     redirect_uri: FREEE_CONFIG.redirectUri,
-    response_type: 'code',
     state,
+    prompt: 'select_company', // freee APIで必須のパラメータ
   })
 
   return `${FREEE_CONFIG.authUrl}?${params.toString()}`

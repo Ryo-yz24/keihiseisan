@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getAuthorizationUrl, isFreeeEnabled } from '@/lib/freee'
+import { getAuthorizationUrl, isFreeeEnabled, FREEE_CONFIG } from '@/lib/freee'
 import { randomBytes } from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -33,8 +33,14 @@ export async function GET(request: NextRequest) {
     // CSRF対策用のstateパラメータを生成
     const state = randomBytes(32).toString('hex')
 
+    // OAuth URLを生成
+    const authUrl = getAuthorizationUrl(state)
+    console.log('[freee OAuth] Authorization URL:', authUrl)
+    console.log('[freee OAuth] Client ID:', FREEE_CONFIG.clientId)
+    console.log('[freee OAuth] Redirect URI:', FREEE_CONFIG.redirectUri)
+
     // stateをセッションに保存（簡易実装：実際はRedisなどを使用推奨）
-    const response = NextResponse.redirect(getAuthorizationUrl(state))
+    const response = NextResponse.redirect(authUrl)
 
     // stateをCookieに保存（10分間有効）
     response.cookies.set('freee_oauth_state', state, {
