@@ -44,6 +44,10 @@ const AnnualSummaryReport = dynamic(() => import('./annual-summary-report').then
   loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
 })
 
+const FreeeIntegration = dynamic(() => import('./freee-integration').then(mod => ({ default: mod.FreeeIntegration })), {
+  loading: () => <div className="text-center py-8 text-gray-500">読み込み中...</div>
+})
+
 interface AdminDashboardProps {
   user: {
     id: string
@@ -55,7 +59,7 @@ interface AdminDashboardProps {
   }
 }
 
-type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'expense-approval' | 'child-accounts' | 'audit' | 'reports' | 'settings'
+type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'expense-approval' | 'child-accounts' | 'audit' | 'reports' | 'freee' | 'settings'
 
 export function AdminDashboard({ user }: AdminDashboardProps) {
   const searchParams = useSearchParams()
@@ -92,6 +96,8 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         return <AuditLogs masterUserId={user.id} />
       case 'reports':
         return <AnnualSummaryReport />
+      case 'freee':
+        return <FreeeIntegration />
       case 'settings':
         return <SystemSettings masterUserId={user.id} />
       default:

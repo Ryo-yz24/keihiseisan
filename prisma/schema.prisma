@@ -59,6 +59,8 @@ model User {
   notifications      Notification[]
   masterUser         User?                   @relation("MasterChild", fields: [masterUserId], references: [id])
   childUsers         User[]                  @relation("MasterChild")
+  freeeIntegration   FreeeIntegration?
+  freeeCategoryMappings FreeeCategoryMapping[]
 
   @@map("users")
 }
@@ -92,6 +94,7 @@ model Expense {
   approver         User?          @relation("ApprovedExpenses", fields: [approvedBy], references: [id])
   user             User           @relation(fields: [userId], references: [id])
   notifications    Notification[]
+  freeeSync        FreeeSync?
 
   @@map("expenses")
 }
@@ -227,4 +230,61 @@ enum ExemptionRequestStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+enum FreeSyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  SKIPPED
+}
+
+model FreeeIntegration {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  companyId       Int
+  companyName     String?
+  accessToken     String
+  refreshToken    String
+  tokenExpiresAt  DateTime
+  isActive        Boolean   @default(true)
+  autoSync        Boolean   @default(false)
+  lastSyncAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncLogs        FreeeSync[]
+
+  @@map("freee_integrations")
+}
+
+model FreeeSync {
+  id                  String          @id @default(cuid())
+  integrationId       String
+  expenseId           String
+  freeDealId          Int?
+  status              FreeSyncStatus  @default(PENDING)
+  errorMessage        String?
+  syncedAt            DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  integration         FreeeIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  expense             Expense         @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId])
+  @@map("freee_syncs")
+}
+
+model FreeeCategoryMapping {
+  id                String   @id @default(cuid())
+  userId            String
+  categoryName      String
+  freeeAccountItemId Int
+  freeeAccountItemName String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryName])
+  @@map("freee_category_mappings")
 }

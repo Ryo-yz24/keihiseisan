@@ -1,8 +1,8 @@
 'use client'
 
-import { X, Users, DollarSign, Tag, RefreshCw, Shield, Settings, UserPlus, FileText, BarChart3 } from 'lucide-react'
+import { X, Users, DollarSign, Tag, RefreshCw, Shield, Settings, UserPlus, FileText, BarChart3, Building2 } from 'lucide-react'
 
-type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'expense-approval' | 'child-accounts' | 'audit' | 'reports' | 'settings'
+type AdminTab = 'users' | 'limits' | 'categories' | 'exemption' | 'expense-approval' | 'child-accounts' | 'audit' | 'reports' | 'freee' | 'settings'
 
 interface AdminSidebarProps {
   activeTab: AdminTab
@@ -60,6 +60,12 @@ export function AdminSidebar({ activeTab, onTabChange, isOpen, onClose }: AdminS
       name: 'レポート',
       icon: BarChart3,
       description: '年次サマリーと分析レポート'
+    },
+    {
+      id: 'freee' as const,
+      name: 'freee連携',
+      icon: Building2,
+      description: '会計ソフトfreeeとの連携'
     },
     {
       id: 'settings' as const,
