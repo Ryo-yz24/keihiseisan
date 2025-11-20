@@ -161,7 +161,7 @@ export function DashboardContent({ user, stats }: DashboardContentProps) {
 
       {/* 上限解放申請ダイアログ */}
       <Dialog open={showExemptionDialog} onOpenChange={setShowExemptionDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>上限解放申請</DialogTitle>
           </DialogHeader>

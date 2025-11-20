@@ -36,9 +36,9 @@ export function ChildAccountManagement({ masterUserId }: ChildAccountManagementP
   const fetchChildAccounts = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/child-accounts')
+      const response = await fetch(`/api/admin/child-accounts?_t=${Date.now()}`)
       const data = await response.json()
-      
+
       if (data.success) {
         setChildAccounts(data.childAccounts)
       } else {

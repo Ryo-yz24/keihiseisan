@@ -108,7 +108,7 @@ export function ExemptionInfoCard({
           </div>
 
           {/* 詳細情報 */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <div className="text-muted-foreground">基本限度額</div>
               <div className="font-medium">

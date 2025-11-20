@@ -56,7 +56,16 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ success: true, expenses })
+    return NextResponse.json(
+      { success: true, expenses },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    )
   } catch (error) {
     console.error('Error fetching expenses for admin:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

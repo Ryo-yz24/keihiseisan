@@ -44,11 +44,20 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    return NextResponse.json({
-      success: true,
-      notifications,
-      unreadCount,
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        notifications,
+        unreadCount,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    )
   } catch (error) {
     console.error('Error fetching notifications:', error)
     return NextResponse.json(

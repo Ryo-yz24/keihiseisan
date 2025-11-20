@@ -47,7 +47,7 @@ export function UserManagement({ masterUserId }: UserManagementProps) {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/users')
+      const response = await fetch(`/api/admin/users?_t=${Date.now()}`)
       if (response.ok) {
         const data = await response.json()
         setUsers(data.users || [])

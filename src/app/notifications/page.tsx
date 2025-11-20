@@ -48,7 +48,7 @@ export default function NotificationsPage() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('/api/notifications/settings')
+      const response = await fetch(`/api/notifications/settings?_t=${Date.now()}`)
       if (response.ok) {
         const data = await response.json()
         setSettings(data)

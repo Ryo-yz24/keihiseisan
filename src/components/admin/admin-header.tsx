@@ -51,7 +51,7 @@ export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications')
+      const response = await fetch(`/api/notifications?_t=${Date.now()}`)
       if (response.ok) {
         const data = await response.json()
         setNotifications(data.notifications || [])

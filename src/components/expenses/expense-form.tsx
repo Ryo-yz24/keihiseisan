@@ -270,7 +270,7 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
             ) : (
               <Select value={form.watch('category') || undefined} onValueChange={(value) => form.setValue('category', value)}>
                 <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
                   {categories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                   ))}
@@ -315,7 +315,7 @@ export function ExpenseForm({ userId, expense, onCancel, onSuccess }: ExpenseFor
               <Label>税率 <span className="text-red-500">*</span></Label>
               <Select value={form.watch('taxRate')} onValueChange={(value) => form.setValue('taxRate', value)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
                   <SelectItem value="10">10%</SelectItem>
                   <SelectItem value="8">8%（軽減税率）</SelectItem>
                   <SelectItem value="0">0%（非課税）</SelectItem>
